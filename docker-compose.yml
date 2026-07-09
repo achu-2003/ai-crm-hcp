@@ -1,0 +1,46 @@
+# One-command run:  docker compose up --build
+# Then open http://localhost:3000
+#
+# Set your Groq token first (create one at https://console.groq.com/keys):
+#   cp .env.example .env   # then edit LLM_API_KEY
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: crm
+      POSTGRES_DB: crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://crm:crm@db:5432/crm
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      LLM_MODEL_CHAT: ${LLM_MODEL_CHAT:-gemma2-9b-it}
+      LLM_MODEL_ROUTER: ${LLM_MODEL_ROUTER:-gemma2-9b-it}
+      CORS_ALLOW_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:
