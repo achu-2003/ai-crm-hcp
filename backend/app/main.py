@@ -13,9 +13,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.graph import AgentRuntime
-from app.api.routes import chat, health, hcps, interactions
+from app.api.routes import chat, followups, health, hcps, interactions, stats
 from app.config import get_settings
-from app.seed import seed
+from app.seed import init_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("crm")
@@ -24,13 +24,14 @@ log = logging.getLogger("crm")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    await seed()  # create_all + demo data (idempotent)
+    await init_db()  # create tables (+ demo data only if SEED_DEMO_DATA=true)
     app.state.agent = AgentRuntime()  # compile the LangGraph graph once
     log.info(
-        "CRM ready — model=%s router=%s llm_configured=%s",
+        "CRM ready — model=%s router=%s llm_configured=%s seed_demo=%s",
         settings.llm_model_chat,
         settings.llm_model_router,
         settings.llm_configured,
+        settings.seed_demo_data,
     )
     yield
 
@@ -48,8 +49,10 @@ if _settings.cors_origin_list:
     )
 
 app.include_router(health.router, prefix="/health", tags=["health"])
+app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
 app.include_router(hcps.router, prefix="/api/v1/hcps", tags=["hcps"])
 app.include_router(interactions.router, prefix="/api/v1/interactions", tags=["interactions"])
+app.include_router(followups.router, prefix="/api/v1/followups", tags=["followups"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 
 

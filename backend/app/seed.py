@@ -1,7 +1,11 @@
-"""Seed the DB with realistic HCPs and a couple of sample interactions.
+"""Create the database schema, and optionally seed sample demo data.
 
-Idempotent: does nothing if HCPs already exist. Called on startup and also
-runnable standalone: `python -m app.seed`.
+`init_db()` always runs on startup: it creates the tables (idempotent) and,
+only when SEED_DEMO_DATA=true, inserts a few realistic HCPs + sample
+interactions so the app has something to show immediately. With the flag off
+(the default) the app starts completely clean — add your own HCPs from the UI.
+
+Runnable standalone to force-seed the demo data: `python -m app.seed`.
 """
 from __future__ import annotations
 
@@ -10,6 +14,7 @@ from datetime import timedelta, datetime, timezone
 
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.db.session import engine, session_scope
 from app.models import Base, HCP, Interaction
 
@@ -29,9 +34,13 @@ _HCPS = [
 ]
 
 
-async def seed() -> None:
+async def init_db(force_demo: bool = False) -> None:
+    """Create tables always; seed demo data only when enabled."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    if not (force_demo or get_settings().seed_demo_data):
+        return
 
     async with session_scope() as s:
         existing = (await s.execute(select(HCP).limit(1))).scalar_one_or_none()
@@ -67,4 +76,5 @@ async def seed() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    # Running this module directly always seeds the demo data.
+    asyncio.run(init_db(force_demo=True))

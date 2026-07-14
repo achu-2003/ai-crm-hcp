@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { selectSelectedHcp } from '../store/hcpsSlice'
 import { fetchInteractions } from '../store/interactionsSlice'
+import { fetchFollowups } from '../store/followupsSlice'
 import { resetChat } from '../store/chatSlice'
 import { avatarColor, initials } from '../utils'
 import InteractionForm from './InteractionForm'
 import ChatPanel from './ChatPanel'
 import InteractionList from './InteractionList'
+import FollowUpsPanel from './FollowUpsPanel'
 
 export default function LogInteractionScreen() {
   const dispatch = useDispatch()
@@ -16,14 +18,25 @@ export default function LogInteractionScreen() {
   useEffect(() => {
     if (hcp) {
       dispatch(fetchInteractions(hcp.id))
+      dispatch(fetchFollowups(hcp.id))
       dispatch(resetChat())
     }
   }, [hcp?.id])
 
-  if (!hcp) return <main className="main"><div className="empty-block">Select an HCP to begin.</div></main>
+  if (!hcp) {
+    return (
+      <main className="main">
+        <div className="empty-block big-empty">
+          <div className="se-icon">🩺</div>
+          <div className="se-title">No HCP selected</div>
+          <div className="se-text">Add or select a Healthcare Professional in the left sidebar to log an interaction.</div>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="main">
+    <main className="main fade-in">
       <div className="page-head">
         <div>
           <div className="page-title">Log Interaction</div>
@@ -38,7 +51,9 @@ export default function LogInteractionScreen() {
         </div>
         <div>
           <div className="hcp-name" style={{ fontSize: 15 }}>{hcp.name}</div>
-          <div className="hcp-spec">{hcp.specialty} · {hcp.institution}</div>
+          <div className="hcp-spec">
+            {[hcp.specialty, hcp.institution].filter(Boolean).join(' · ') || 'No profile details'}
+          </div>
           <div className="chip-row">
             {(hcp.preferred_products || []).map((p) => (
               <span className="mini-chip" key={p}>💊 {p}</span>
@@ -48,11 +63,11 @@ export default function LogInteractionScreen() {
         <div className="hero-facts">
           <div>
             <div className="fact-label">Tier</div>
-            <div className="fact-value">{hcp.tier}</div>
+            <div className={`fact-value tier ${hcp.tier}`} style={{ display: 'inline-block' }}>{hcp.tier}</div>
           </div>
           <div>
             <div className="fact-label">City</div>
-            <div className="fact-value">{hcp.city}</div>
+            <div className="fact-value">{hcp.city || '—'}</div>
           </div>
         </div>
       </div>
@@ -69,7 +84,10 @@ export default function LogInteractionScreen() {
 
       <div className="two-col">
         {tab === 'form' ? <InteractionForm hcp={hcp} /> : <ChatPanel hcp={hcp} />}
-        <InteractionList />
+        <div className="side-col">
+          <FollowUpsPanel />
+          <InteractionList />
+        </div>
       </div>
     </main>
   )

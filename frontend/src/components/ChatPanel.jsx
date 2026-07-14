@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { pushUser, sendMessage } from '../store/chatSlice'
 import { fetchInteractions } from '../store/interactionsSlice'
+import { fetchFollowups } from '../store/followupsSlice'
 
 const TOOL_LABELS = {
   log_interaction: 'Logged ✓',
@@ -40,6 +41,9 @@ export default function ChatPanel({ hcp }) {
       const tool = res.payload.tool_used
       if (tool === 'log_interaction' || tool === 'edit_interaction') {
         dispatch(fetchInteractions(hcp.id))
+      }
+      if (tool === 'schedule_followup') {
+        dispatch(fetchFollowups(hcp.id))
       }
     }
   }

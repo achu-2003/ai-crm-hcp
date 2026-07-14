@@ -48,6 +48,14 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DATABASE_URL",),
     )
 
+    # Seed a few sample HCPs + interactions on first startup. Off by default so
+    # the app starts clean with no demo data; flip to true for an instant,
+    # ready-to-demo dataset (useful for a walkthrough/recording).
+    seed_demo_data: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("SEED_DEMO_DATA",),
+    )
+
     # ── CORS ──
     cors_allow_origins: str = Field(
         default="http://localhost:5173,http://localhost:4173,http://localhost:3000",

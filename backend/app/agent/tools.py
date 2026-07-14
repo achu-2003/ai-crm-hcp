@@ -49,6 +49,33 @@ def _utcnow() -> datetime:
 # Heuristic fallback used when the LLM is offline or returns nothing, so the
 # tool always produces a usable structured record.
 # ──────────────────────────────────────────────────────────────────────────
+# Leading command phrases a rep might type in chat ("log a call with…",
+# "record that…") that shouldn't appear in the stored CRM summary.
+_COMMAND_PREFIX = re.compile(
+    r"^\s*(?:please\s+)?"
+    r"(?:log|record|note|add|capture|save|create|make)"
+    r"(?:\s+(?:a|an|this|the|that|down))?"
+    r"(?:\s+(?:new|quick))?"
+    r"(?:\s+(?:interaction|call|visit|email|meeting|note|entry))?"
+    r"(?:\s+(?:with|for|that|about|:|-|,))?\s+",
+    re.IGNORECASE,
+)
+
+
+def _clean_summary(notes: str) -> str:
+    """Best-effort readable summary for offline mode: drop a leading command
+    verb and capitalise, so a chat message like 'log a call, discussed dosing'
+    is stored as 'Discussed dosing' rather than echoing the instruction."""
+    text = _COMMAND_PREFIX.sub("", notes.strip(), count=1).strip()
+    if not text:
+        text = notes.strip()
+    if text:
+        text = text[0].upper() + text[1:]
+    if len(text) > 180:
+        text = text[:177].rstrip() + "..."
+    return text
+
+
 def _heuristic_extract(notes: str) -> dict[str, Any]:
     low = notes.lower()
     if any(w in low for w in ("zoom", "teams", "virtual", "video call", "webex")):
@@ -72,9 +99,7 @@ def _heuristic_extract(notes: str) -> dict[str, Any]:
         samples.append(f"{m.group(1)} x{m.group(2)}")
     follow = any(w in low for w in ("follow up", "follow-up", "followup", "next month", "next week", "call back", "revisit", "schedule"))
 
-    summary = notes.strip()
-    if len(summary) > 180:
-        summary = summary[:177] + "..."
+    summary = _clean_summary(notes)
 
     return {
         "interaction_type": itype,

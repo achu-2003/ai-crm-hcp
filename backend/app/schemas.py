@@ -8,6 +8,19 @@ from pydantic import BaseModel, Field
 
 Sentiment = Literal["positive", "neutral", "negative"]
 InteractionType = Literal["call", "visit", "email", "virtual"]
+Tier = Literal["A", "B", "C"]
+
+
+class HCPCreate(BaseModel):
+    """Create a Healthcare Professional from the UI (replaces demo seed data)."""
+
+    name: str = Field(min_length=1, max_length=200)
+    specialty: str = ""
+    institution: str = ""
+    tier: Tier = "B"
+    preferred_products: list[str] = Field(default_factory=list)
+    email: str = ""
+    city: str = ""
 
 
 class InteractionCreate(BaseModel):
@@ -41,6 +54,13 @@ class InteractionUpdate(BaseModel):
     key_topics: Optional[list[str]] = None
     summary: Optional[str] = None
     follow_up_needed: Optional[bool] = None
+
+
+class FollowUpUpdate(BaseModel):
+    """Mark a follow-up done / reword its purpose."""
+
+    status: Optional[Literal["open", "done"]] = None
+    purpose: Optional[str] = None
 
 
 class ChatRequest(BaseModel):

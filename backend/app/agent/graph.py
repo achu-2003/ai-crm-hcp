@@ -14,6 +14,7 @@ Pattern adapted from job7_chatbot/app/agent/runtime.py (_build_graph).
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -163,15 +164,33 @@ class AgentRuntime:
     # ── Helpers ───────────────────────────────────────────────────────────
     @staticmethod
     def _fallback_tool(message: str) -> str:
-        low = message.lower()
-        if any(w in low for w in ("change", "edit", "update", "correct", "actually", "instead")):
+        """Deterministic intent guess used only in OFFLINE mode (no LLM router).
+
+        Precedence matters: an explicit leading command verb wins, so
+        "log a visit ... wants a follow-up" is a LOG (not a schedule) even
+        though it mentions a follow-up, while "schedule a follow-up" still
+        routes to scheduling.
+        """
+        low = message.strip().lower()
+        # 1) Explicit "log/record this…" always means capture an interaction.
+        if re.match(r"^(log|record|capture|save)\b", low):
+            return "log_interaction"
+        # 2) Corrections to an existing record.
+        if any(w in low for w in ("change", "edit", "update", "correct", "actually", "instead", "rename")):
             return "edit_interaction"
-        if any(w in low for w in ("history", "last time", "previous", "what did")):
+        # 3) Asking about past interactions.
+        if any(w in low for w in ("history", "last time", "previous", "what did", "recently", "what have we")):
             return "get_interaction_history"
-        if any(w in low for w in ("schedule", "follow up", "follow-up", "next visit", "remind")):
+        # 4) Scheduling — needs a scheduling verb up front or an explicit phrase,
+        #    not just the words "follow up" appearing anywhere in the notes.
+        if re.match(r"^(schedule|book|plan|set up|set a|remind)\b", low) or any(
+            p in low for p in ("schedule a follow", "book a follow", "set a follow", "next visit", "plan a follow")
+        ):
             return "schedule_followup"
-        if any(w in low for w in ("who is", "profile", "specialty", "tier", "details about")):
+        # 5) Asking about the HCP's profile.
+        if any(w in low for w in ("who is", "profile", "specialty", "tier", "details about", "tell me about")):
             return "get_hcp_details"
+        # 6) Small talk.
         if any(w in low for w in ("hi", "hello", "hey", "thanks", "thank you")) and len(message) < 30:
             return "chitchat"
         return "log_interaction"
@@ -199,6 +218,14 @@ class AgentRuntime:
             )
         if tool == "schedule_followup" and isinstance(result, dict):
             return f"📅 Follow-up scheduled for {str(result.get('due_date', ''))[:10]}: {result.get('purpose')}."
+        if tool == "chitchat":
+            hcp = state.get("context", {}).get("hcp", {})
+            who = hcp.get("name")
+            return (
+                f"Hi! I'm your CRM assistant"
+                + (f" — ready to help with {who}. " if who else ". ")
+                + "Tell me about a call or visit and I'll log it, or ask what you discussed last time."
+            )
         return "👍 Done."
 
     # ── Public entry ──────────────────────────────────────────────────────
