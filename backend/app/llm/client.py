@@ -64,23 +64,36 @@ class LLMClient:
         s = self._settings
         model = model or s.llm_model_chat
 
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(s.llm_max_retries + 1),
-            # 20s max so a Groq 429 (TPM resets each minute) clears next attempt.
-            wait=wait_exponential(min=0.5, max=20),
-            retry=retry_if_exception_type(Exception),
-            reraise=True,
-        ):
-            with attempt:
-                kwargs: dict[str, Any] = {
-                    "model": model,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                }
-                if response_format is not None:
-                    kwargs["response_format"] = response_format
-                resp = await self._client.chat.completions.create(**kwargs)
+        try:
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(s.llm_max_retries + 1),
+                # 20s max so a Groq 429 (TPM resets each minute) clears next attempt.
+                wait=wait_exponential(min=0.5, max=20),
+                retry=retry_if_exception_type(Exception),
+                reraise=True,
+            ):
+                with attempt:
+                    kwargs: dict[str, Any] = {
+                        "model": model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    }
+                    if response_format is not None:
+                        kwargs["response_format"] = response_format
+                    resp = await self._client.chat.completions.create(**kwargs)
+        except Exception as exc:
+            # Retries are exhausted (bad key, network down, Groq 429/5xx). Degrade
+            # instead of raising, so the rep's interaction is still captured rather
+            # than dying as a 500 and losing their note.
+            #
+            # Return the callers' own "nothing came back" sentinel rather than the
+            # keyless placeholder prose: json_chat turns "{}" into {} and backfills
+            # from heuristics, and the responder turns "" into its deterministic
+            # confirmation. Handing back the OFFLINE text here would instead be
+            # shown to the rep verbatim — telling them to set a key they have set.
+            log.warning("llm_call_failed model=%s err=%s — degrading", model, exc)
+            return "{}" if response_format is not None else ""
 
         return resp.choices[0].message.content or ""
 

@@ -200,12 +200,27 @@ class AgentRuntime:
         if isinstance(result, dict) and result.get("error"):
             return f"⚠️ {result['error']}"
         if tool == "log_interaction" and isinstance(result, dict):
-            return (
-                f"✅ Logged this {result.get('interaction_type', 'interaction')} — "
-                f"sentiment {result.get('sentiment', 'neutral')}. "
-                f"Summary: {result.get('summary', '')}"
-                + (" A follow-up is flagged." if result.get("follow_up_needed") else "")
+            filled = [
+                label
+                for label, key in (
+                    ("HCP Name", "hcp_name"),
+                    ("Date", "interaction_date"),
+                    ("Topics", "topics_discussed"),
+                    ("Materials", "materials_shared"),
+                    ("Samples", "samples_dropped"),
+                    ("Sentiment", "sentiment"),
+                )
+                if result.get(key)
+            ]
+            reply = (
+                "✅ Interaction logged successfully! "
+                f"The details ({', '.join(filled)}) have been automatically populated "
+                "on the form from your summary — have a quick look and adjust anything "
+                "I got wrong."
             )
+            if result.get("follow_up_needed"):
+                reply += " Would you like me to schedule the follow-up?"
+            return reply
         if tool == "edit_interaction" and isinstance(result, dict):
             applied = result.get("_applied", {})
             return f"✏️ Updated interaction #{result.get('id')} — changed: {', '.join(applied) or 'nothing'}."

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { pushUser, sendMessage } from '../store/chatSlice'
-import { fetchInteractions } from '../store/interactionsSlice'
+import { applyDraft, fetchInteractions } from '../store/interactionsSlice'
 import { fetchFollowups } from '../store/followupsSlice'
 
 const TOOL_LABELS = {
@@ -14,7 +14,7 @@ const TOOL_LABELS = {
 }
 
 const SUGGESTIONS = [
-  'Log a quick call — discussed dosing, left 2 samples, positive',
+  'Today I met with Dr. Smith and discussed Product X efficacy. The sentiment was positive, and I shared the brochures.',
   'What did we discuss recently?',
   'Actually, change the sentiment to positive',
   'Schedule a follow-up in 2 weeks',
@@ -36,10 +36,12 @@ export default function ChatPanel({ hcp }) {
     dispatch(pushUser(msg))
     setText('')
     const res = await dispatch(sendMessage({ hcpId: hcp.id, text: msg }))
-    // Refresh the interaction list if the agent logged/edited something.
     if (sendMessage.fulfilled.match(res)) {
-      const tool = res.payload.tool_used
+      const { tool_used: tool, tool_result: result } = res.payload
       if (tool === 'log_interaction' || tool === 'edit_interaction') {
+        // Mirror the record the agent just wrote into the form, so the rep sees
+        // exactly what was extracted and can correct it before it stands.
+        if (result && !result.error) dispatch(applyDraft(result))
         dispatch(fetchInteractions(hcp.id))
       }
       if (tool === 'schedule_followup') {
@@ -50,17 +52,20 @@ export default function ChatPanel({ hcp }) {
 
   return (
     <div className="card card-pad chat-wrap fade-in">
+      <div className="assistant-head">
+        <div className="assistant-title">🤖 AI Assistant</div>
+        <div className="assistant-sub">Log interaction details here via chat</div>
+      </div>
+
       <div className="chat-scroll" ref={scrollRef}>
+        <div className="assistant-hint">
+          Describe the interaction in your own words (e.g. “Met Dr. Mehta, discussed Cardizem
+          efficacy, positive sentiment, shared brochure”) and I’ll fill in the form — or ask me
+          for help.
+        </div>
+
         {messages.length === 0 && (
           <div className="chat-empty">
-            <div className="big">💬</div>
-            <div style={{ fontWeight: 600, color: 'var(--text-soft)' }}>
-              Log interactions by chatting
-            </div>
-            <div style={{ marginTop: 4 }}>
-              Talk to the CRM the way you'd brief a colleague. The LangGraph agent decides which
-              tool to run.
-            </div>
             <div className="suggestion-row">
               {SUGGESTIONS.map((s) => (
                 <button key={s} className="suggestion" onClick={() => send(s)}>
@@ -102,13 +107,13 @@ export default function ChatPanel({ hcp }) {
       <div className="chat-input">
         <input
           type="text"
-          placeholder={`Message the CRM about ${hcp.name}…`}
+          placeholder="Describe Interaction…"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
         />
         <button className="btn" onClick={() => send()} disabled={sending || !text.trim()}>
-          Send
+          Log
         </button>
       </div>
     </div>

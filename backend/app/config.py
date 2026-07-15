@@ -29,14 +29,18 @@ class Settings(BaseSettings):
         default="https://api.groq.com/openai/v1",
         validation_alias=AliasChoices("LLM_BASE_URL", "OPENAI_BASE_URL"),
     )
+    # The brief names gemma2-9b-it, but Groq DECOMMISSIONED that model
+    # ("model_decommissioned", see https://console.groq.com/docs/deprecations),
+    # so it 400s on every call. We default to the brief's own sanctioned
+    # alternative. The model is configuration, never hardcoded — swapping it back
+    # is a one-line .env change if Groq ever restores it.
     llm_model_chat: str = Field(
-        default="gemma2-9b-it",
+        default="llama-3.3-70b-versatile",
         validation_alias=AliasChoices("LLM_MODEL_CHAT", "OPENAI_MODEL_CHAT"),
     )
-    # Router/tool-selection node. Defaults to the chat model; can be pointed at
-    # llama-3.3-70b-versatile for stronger reasoning without any code change.
+    # Router/tool-selection node — independently swappable from the chat model.
     llm_model_router: str = Field(
-        default="gemma2-9b-it",
+        default="llama-3.3-70b-versatile",
         validation_alias=AliasChoices("LLM_MODEL_ROUTER",),
     )
     llm_timeout_seconds: float = Field(default=30.0)
@@ -46,14 +50,6 @@ class Settings(BaseSettings):
     database_url: str = Field(
         default="sqlite+aiosqlite:///./crm.db",
         validation_alias=AliasChoices("DATABASE_URL",),
-    )
-
-    # Seed a few sample HCPs + interactions on first startup. Off by default so
-    # the app starts clean with no demo data; flip to true for an instant,
-    # ready-to-demo dataset (useful for a walkthrough/recording).
-    seed_demo_data: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("SEED_DEMO_DATA",),
     )
 
     # ── CORS ──

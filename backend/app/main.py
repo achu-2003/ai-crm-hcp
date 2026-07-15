@@ -1,8 +1,8 @@
 """FastAPI application entrypoint.
 
-Lifespan: create tables, seed demo data, and build the LangGraph agent ONCE
-(stored on app.state.agent). Routers are one-per-file under app/api/routes.
-CORS is configured for the React dev/preview servers.
+Lifespan: create/migrate tables and build the LangGraph agent ONCE (stored on
+app.state.agent). Routers are one-per-file under app/api/routes. CORS is
+configured for the React dev/preview servers.
 """
 from __future__ import annotations
 
@@ -24,14 +24,13 @@ log = logging.getLogger("crm")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    await init_db()  # create tables (+ demo data only if SEED_DEMO_DATA=true)
+    await init_db()  # create tables + migrate an older DB forward
     app.state.agent = AgentRuntime()  # compile the LangGraph graph once
     log.info(
-        "CRM ready — model=%s router=%s llm_configured=%s seed_demo=%s",
+        "CRM ready — model=%s router=%s llm_configured=%s",
         settings.llm_model_chat,
         settings.llm_model_router,
         settings.llm_configured,
-        settings.seed_demo_data,
     )
     yield
 

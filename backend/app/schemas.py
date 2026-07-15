@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 Sentiment = Literal["positive", "neutral", "negative"]
-InteractionType = Literal["call", "visit", "email", "virtual"]
+InteractionType = Literal["call", "visit", "email", "virtual", "meeting"]
 Tier = Literal["A", "B", "C"]
 
 
@@ -33,12 +33,19 @@ class InteractionCreate(BaseModel):
     interaction_type: Optional[InteractionType] = None
     interaction_date: Optional[datetime] = None
     channel: Optional[str] = None
+    attendees: Optional[list[str]] = None
     products_discussed: Optional[list[str]] = None
+    materials_shared: Optional[list[str]] = None
     samples_dropped: Optional[list[str]] = None
     sentiment: Optional[Sentiment] = None
     key_topics: Optional[list[str]] = None
+    topics_discussed: Optional[str] = None
+    outcomes: Optional[str] = None
+    follow_up_actions: Optional[str] = None
     summary: Optional[str] = None
     follow_up_needed: Optional[bool] = None
+    consent_obtained: Optional[bool] = None
+    source: Optional[Literal["form", "chat", "voice"]] = None
     enrich: bool = True  # run the LangGraph log_interaction tool / LLM enrichment
 
 
@@ -48,12 +55,27 @@ class InteractionUpdate(BaseModel):
     interaction_type: Optional[InteractionType] = None
     interaction_date: Optional[datetime] = None
     channel: Optional[str] = None
+    attendees: Optional[list[str]] = None
     products_discussed: Optional[list[str]] = None
+    materials_shared: Optional[list[str]] = None
     samples_dropped: Optional[list[str]] = None
     sentiment: Optional[Sentiment] = None
     key_topics: Optional[list[str]] = None
+    topics_discussed: Optional[str] = None
+    outcomes: Optional[str] = None
+    follow_up_actions: Optional[str] = None
     summary: Optional[str] = None
     follow_up_needed: Optional[bool] = None
+
+
+class ExtractRequest(BaseModel):
+    """Draft-only extraction: turn free text (typed notes or a voice transcript)
+    into structured fields for the form WITHOUT persisting anything. The rep
+    reviews the draft and submits it themselves."""
+
+    text: str
+    hcp_id: Optional[int] = None
+    consent_obtained: bool = False
 
 
 class FollowUpUpdate(BaseModel):

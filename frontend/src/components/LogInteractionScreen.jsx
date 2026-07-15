@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { selectSelectedHcp } from '../store/hcpsSlice'
-import { fetchInteractions } from '../store/interactionsSlice'
+import { fetchInteractions, resetDraft } from '../store/interactionsSlice'
 import { fetchFollowups } from '../store/followupsSlice'
 import { resetChat } from '../store/chatSlice'
 import { avatarColor, initials } from '../utils'
@@ -13,13 +13,14 @@ import FollowUpsPanel from './FollowUpsPanel'
 export default function LogInteractionScreen() {
   const dispatch = useDispatch()
   const hcp = useSelector(selectSelectedHcp)
-  const [tab, setTab] = useState('form')
 
   useEffect(() => {
     if (hcp) {
       dispatch(fetchInteractions(hcp.id))
       dispatch(fetchFollowups(hcp.id))
       dispatch(resetChat())
+      // A half-filled draft belongs to the HCP it was written for.
+      dispatch(resetDraft())
     }
   }, [hcp?.id])
 
@@ -40,7 +41,10 @@ export default function LogInteractionScreen() {
       <div className="page-head">
         <div>
           <div className="page-title">Log Interaction</div>
-          <div className="page-sub">Capture a touchpoint via a structured form or a quick chat.</div>
+          <div className="page-sub">
+            Describe the touchpoint to the assistant, dictate it, or fill the form — you confirm
+            what gets saved.
+          </div>
         </div>
       </div>
 
@@ -72,21 +76,18 @@ export default function LogInteractionScreen() {
         </div>
       </div>
 
-      {/* Mode toggle */}
-      <div className="tabs">
-        <button className={`tab ${tab === 'form' ? 'active' : ''}`} onClick={() => setTab('form')}>
-          📋 Structured form
-        </button>
-        <button className={`tab ${tab === 'chat' ? 'active' : ''}`} onClick={() => setTab('chat')}>
-          💬 Conversational
-        </button>
+      {/* The form and the assistant are one workspace, not two modes: the rep
+          can type into either side and the agent's extraction lands in the
+          form, where they confirm it. */}
+      <div className="log-cols">
+        <InteractionForm hcp={hcp} />
+        <ChatPanel hcp={hcp} />
       </div>
 
-      <div className="two-col">
-        {tab === 'form' ? <InteractionForm hcp={hcp} /> : <ChatPanel hcp={hcp} />}
+      <div className="two-col" style={{ marginTop: 18 }}>
+        <InteractionList />
         <div className="side-col">
           <FollowUpsPanel />
-          <InteractionList />
         </div>
       </div>
     </main>

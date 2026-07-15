@@ -27,22 +27,60 @@ from app.agent.prompts import EDIT_SYSTEM, EXTRACT_SYSTEM
 from app.llm.client import get_llm
 from app.models import FollowUp, HCP, Interaction
 
-_ALLOWED_TYPES = {"call", "visit", "email", "virtual"}
+_ALLOWED_TYPES = {"call", "visit", "email", "virtual", "meeting"}
 _ALLOWED_SENTIMENT = {"positive", "neutral", "negative"}
 _EDITABLE_FIELDS = {
     "interaction_type",
+    "interaction_date",
     "channel",
+    "attendees",
     "products_discussed",
+    "materials_shared",
     "samples_dropped",
     "sentiment",
     "key_topics",
+    "topics_discussed",
+    "outcomes",
+    "follow_up_actions",
     "follow_up_needed",
     "summary",
 }
+_LIST_FIELDS = (
+    "attendees",
+    "products_discussed",
+    "materials_shared",
+    "samples_dropped",
+    "key_topics",
+)
+_TEXT_FIELDS = ("topics_discussed", "outcomes", "follow_up_actions")
+
+# Informational leave-behinds the rep might mention by name. Used by the
+# offline heuristic; the LLM extracts these from context when it is available.
+_MATERIAL_WORDS = (
+    "brochure", "brochures", "leaflet", "leaflets", "reprint", "reprints",
+    "deck", "slide deck", "study", "studies", "monograph", "flyer",
+    "pamphlet", "whitepaper", "case study", "data pack",
+)
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _coerce_datetime(value: Any) -> Optional[datetime]:
+    """Accept a datetime or an ISO-8601 string; reject anything else.
+
+    The form sends a real timestamp, but the natural-language edit path routes
+    through the LLM, so this must not trust its input.
+    """
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -82,6 +120,8 @@ def _heuristic_extract(notes: str) -> dict[str, Any]:
         itype = "virtual"
     elif any(w in low for w in ("email", "e-mail", "mailed")):
         itype = "email"
+    elif any(w in low for w in ("meeting", "met with", "sat down with")):
+        itype = "meeting"
     elif any(w in low for w in ("visit", "in person", "in-person", "office", "clinic", "booth")):
         itype = "visit"
     else:
@@ -97,6 +137,15 @@ def _heuristic_extract(notes: str) -> dict[str, Any]:
     samples = []
     for m in re.finditer(r"([A-Z][A-Za-z0-9\-]+)\s*(?:x\s*|×\s*)(\d+)", notes):
         samples.append(f"{m.group(1)} x{m.group(2)}")
+
+    # Leave-behinds named in the notes ("shared the brochures") — deduped and
+    # title-cased so they read as chips.
+    materials = []
+    for word in _MATERIAL_WORDS:
+        if re.search(rf"\b{re.escape(word)}\b", low):
+            materials.append(word.capitalize())
+    materials = list(dict.fromkeys(materials))
+
     follow = any(w in low for w in ("follow up", "follow-up", "followup", "next month", "next week", "call back", "revisit", "schedule"))
 
     summary = _clean_summary(notes)
@@ -104,10 +153,15 @@ def _heuristic_extract(notes: str) -> dict[str, Any]:
     return {
         "interaction_type": itype,
         "channel": "",
+        "attendees": [],
         "products_discussed": [],
+        "materials_shared": materials,
         "samples_dropped": samples,
         "sentiment": sentiment,
         "key_topics": [],
+        "topics_discussed": summary,
+        "outcomes": "",
+        "follow_up_actions": "",
         "follow_up_needed": follow,
         "summary": summary,
     }
@@ -151,11 +205,68 @@ def _clean_extraction(data: dict[str, Any], notes: str) -> dict[str, Any]:
         out["interaction_type"] = base["interaction_type"]
     if out["sentiment"] not in _ALLOWED_SENTIMENT:
         out["sentiment"] = base["sentiment"]
-    for list_field in ("products_discussed", "samples_dropped", "key_topics"):
-        if not isinstance(out.get(list_field), list):
+    for list_field in _LIST_FIELDS:
+        value = out.get(list_field)
+        if not isinstance(value, list):
             out[list_field] = []
+        else:
+            # gemma2 sometimes returns [{"name": "..."}] instead of ["..."]
+            out[list_field] = [str(v) for v in value if v not in (None, "")]
+    for text_field in _TEXT_FIELDS:
+        if not isinstance(out.get(text_field), str):
+            out[text_field] = ""
+    # The form's "Topics Discussed" box should never be blank when the model
+    # did name topics — fall back to the chips, then to the summary.
+    if not out["topics_discussed"].strip():
+        out["topics_discussed"] = ", ".join(out["key_topics"]) or out["summary"]
     out["follow_up_needed"] = bool(out.get("follow_up_needed"))
+    # A named next step implies the flag, even if the model forgot to set it.
+    if out["follow_up_actions"].strip():
+        out["follow_up_needed"] = True
     return out
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Shared extraction — used by log_interaction (persists) and by
+# draft_interaction (does not).
+# ──────────────────────────────────────────────────────────────────────────
+async def _extract_fields(hcp: HCP, raw_notes: str) -> dict[str, Any]:
+    """raw notes -> gemma2-9b-it (JSON mode) -> validated structured fields."""
+    extracted: dict[str, Any] = {}
+    if raw_notes.strip():
+        llm = get_llm()
+        extracted = await llm.json_chat(
+            messages=[
+                {"role": "system", "content": EXTRACT_SYSTEM},
+                {
+                    "role": "user",
+                    "content": (
+                        f"HCP: {hcp.name} ({hcp.specialty}, {hcp.institution}). "
+                        f"Rep notes:\n{raw_notes}"
+                    ),
+                },
+            ]
+        )
+    return _clean_extraction(extracted, raw_notes)
+
+
+async def draft_interaction(
+    session: AsyncSession, *, hcp_id: Optional[int] = None, raw_notes: str = ""
+) -> dict[str, Any]:
+    """Extract structured fields WITHOUT persisting.
+
+    Backs the "AI fills the form, the rep confirms" flow: the typed notes or a
+    voice-note transcript become a draft the rep reviews and edits before they
+    submit it. Nothing reaches the DB until they do.
+    """
+    hcp = await session.get(HCP, hcp_id) if hcp_id is not None else None
+    if hcp is None:
+        # Extraction does not strictly need the HCP — it only enriches the
+        # prompt — so fall back to an unnamed placeholder rather than erroring.
+        hcp = HCP(name="the HCP", specialty="", institution="")
+    fields = await _extract_fields(hcp, raw_notes)
+    fields["raw_notes"] = raw_notes
+    return fields
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -182,22 +293,7 @@ async def log_interaction(
 
     overrides = overrides or {}
 
-    extracted: dict[str, Any] = {}
-    if raw_notes.strip():
-        llm = get_llm()
-        extracted = await llm.json_chat(
-            messages=[
-                {"role": "system", "content": EXTRACT_SYSTEM},
-                {
-                    "role": "user",
-                    "content": (
-                        f"HCP: {hcp.name} ({hcp.specialty}, {hcp.institution}). "
-                        f"Rep notes:\n{raw_notes}"
-                    ),
-                },
-            ]
-        )
-    fields = _clean_extraction(extracted, raw_notes)
+    fields = await _extract_fields(hcp, raw_notes)
 
     # Rep-provided structured fields win over the LLM's guesses.
     for k, v in overrides.items():
@@ -210,13 +306,19 @@ async def log_interaction(
         interaction_type=fields["interaction_type"],
         interaction_date=overrides.get("interaction_date") or _utcnow(),
         channel=fields.get("channel", ""),
+        attendees=fields["attendees"],
         products_discussed=fields["products_discussed"],
+        materials_shared=fields["materials_shared"],
         samples_dropped=fields["samples_dropped"],
         sentiment=fields["sentiment"],
         key_topics=fields["key_topics"],
+        topics_discussed=fields["topics_discussed"],
+        outcomes=fields["outcomes"],
+        follow_up_actions=fields["follow_up_actions"],
         summary=fields["summary"],
         raw_notes=raw_notes,
         follow_up_needed=fields["follow_up_needed"],
+        consent_obtained=bool(overrides.get("consent_obtained")),
         source=source,
     )
     session.add(interaction)
@@ -290,6 +392,10 @@ async def edit_interaction(
             continue
         if field == "sentiment" and value not in _ALLOWED_SENTIMENT:
             continue
+        if field == "interaction_date":
+            value = _coerce_datetime(value)
+            if value is None:
+                continue
         setattr(interaction, field, value)
         applied[field] = value
 

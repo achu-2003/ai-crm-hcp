@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { editInteraction } from '../store/interactionsSlice'
 
-const TYPES = ['call', 'visit', 'email', 'virtual']
+// Must track the backend enum (app/schemas.py::InteractionType) — a type missing
+// here renders as "no type selected" on a record that in fact has one.
+const TYPES = ['meeting', 'call', 'visit', 'email', 'virtual']
 const SENTIMENTS = ['positive', 'neutral', 'negative']
 
 // The structured edit path — calls PATCH /interactions/{id} which runs the

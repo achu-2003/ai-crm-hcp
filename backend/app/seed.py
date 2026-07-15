@@ -1,80 +1,70 @@
-"""Create the database schema, and optionally seed sample demo data.
+"""Create and migrate the database schema.
 
-`init_db()` always runs on startup: it creates the tables (idempotent) and,
-only when SEED_DEMO_DATA=true, inserts a few realistic HCPs + sample
-interactions so the app has something to show immediately. With the flag off
-(the default) the app starts completely clean — add your own HCPs from the UI.
+`init_db()` runs on startup: it creates the tables (idempotent) and brings an
+older database forward with any columns added since it was created.
 
-Runnable standalone to force-seed the demo data: `python -m app.seed`.
+The app ships with NO demo data — it starts empty and you add your own HCPs from
+the UI.
 """
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta, datetime, timezone
+import logging
 
-from sqlalchemy import select
+from sqlalchemy import inspect, text
 
-from app.config import get_settings
-from app.db.session import engine, session_scope
-from app.models import Base, HCP, Interaction
+from app.db.session import engine
+from app.models import Base
 
-_HCPS = [
-    dict(name="Dr. Ananya Mehta", specialty="Cardiology", institution="Apollo Hospitals",
-         tier="A", preferred_products=["Cardizem", "Brilinta"], email="a.mehta@apollo.example", city="Mumbai"),
-    dict(name="Dr. Rajiv Rao", specialty="Endocrinology", institution="Fortis Healthcare",
-         tier="A", preferred_products=["Jardiance", "Ozempic"], email="r.rao@fortis.example", city="Bengaluru"),
-    dict(name="Dr. Sara Kapoor", specialty="Oncology", institution="Tata Memorial Centre",
-         tier="B", preferred_products=["Keytruda"], email="s.kapoor@tmc.example", city="Mumbai"),
-    dict(name="Dr. Vivek Nair", specialty="Pulmonology", institution="AIIMS",
-         tier="B", preferred_products=["Trelegy", "Symbicort"], email="v.nair@aiims.example", city="Delhi"),
-    dict(name="Dr. Priya Sharma", specialty="Neurology", institution="Manipal Hospitals",
-         tier="C", preferred_products=["Aimovig"], email="p.sharma@manipal.example", city="Pune"),
-    dict(name="Dr. Imran Sheikh", specialty="Rheumatology", institution="Max Healthcare",
-         tier="B", preferred_products=["Humira", "Rinvoq"], email="i.sheikh@max.example", city="Delhi"),
-]
+log = logging.getLogger("crm.seed")
 
 
-async def init_db(force_demo: bool = False) -> None:
-    """Create tables always; seed demo data only when enabled."""
+# Columns added after the first release. `create_all` only creates missing
+# *tables*, so an existing crm.db / Postgres volume would keep the old shape —
+# these ALTERs bring it forward. Both SQLite and Postgres accept
+# `ALTER TABLE ... ADD COLUMN ... DEFAULT ...`, and each runs at most once
+# because we diff against the live column list first.
+_ADDED_COLUMNS: dict[str, str] = {
+    "attendees": "JSON DEFAULT '[]'",
+    "materials_shared": "JSON DEFAULT '[]'",
+    "topics_discussed": "TEXT DEFAULT ''",
+    "outcomes": "TEXT DEFAULT ''",
+    "follow_up_actions": "TEXT DEFAULT ''",
+    "consent_obtained": "BOOLEAN DEFAULT 0",
+}
+
+
+def _existing_columns(sync_conn, table: str) -> set[str]:
+    inspector = inspect(sync_conn)
+    if table not in inspector.get_table_names():
+        return set()
+    return {c["name"] for c in inspector.get_columns(table)}
+
+
+async def _migrate(conn) -> None:
+    """Idempotently add any Interaction column the live DB is missing."""
+    present = await conn.run_sync(_existing_columns, "interactions")
+    if not present:  # fresh DB — create_all already made the full table
+        return
+    is_sqlite = conn.dialect.name == "sqlite"
+    for column, ddl in _ADDED_COLUMNS.items():
+        if column in present:
+            continue
+        if not is_sqlite:
+            # Postgres has no implicit int→bool cast for the DEFAULT literal.
+            ddl = ddl.replace("DEFAULT 0", "DEFAULT FALSE")
+        await conn.execute(
+            text(f"ALTER TABLE interactions ADD COLUMN {column} {ddl}")
+        )
+        log.info("migrated: added interactions.%s", column)
+
+
+async def init_db() -> None:
+    """Create the tables, then migrate any older database forward."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    if not (force_demo or get_settings().seed_demo_data):
-        return
-
-    async with session_scope() as s:
-        existing = (await s.execute(select(HCP).limit(1))).scalar_one_or_none()
-        if existing is not None:
-            return
-
-        hcps = [HCP(**data) for data in _HCPS]
-        s.add_all(hcps)
-        await s.flush()
-
-        now = datetime.now(timezone.utc)
-        mehta = hcps[0]
-        s.add_all([
-            Interaction(
-                hcp_id=mehta.id, rep_name="Field Rep", interaction_type="visit",
-                interaction_date=now - timedelta(days=21), channel="in-person",
-                products_discussed=["Cardizem"], samples_dropped=["Cardizem x5"],
-                sentiment="positive", key_topics=["dosing", "formulary access"],
-                summary="In-person visit with Dr. Mehta; discussed Cardizem dosing and left 5 samples. Receptive.",
-                raw_notes="Met Dr Mehta at Apollo, talked Cardizem dosing, left 5 samples, very receptive, wants follow up.",
-                follow_up_needed=True, source="form",
-            ),
-            Interaction(
-                hcp_id=hcps[1].id, rep_name="Field Rep", interaction_type="call",
-                interaction_date=now - timedelta(days=7), channel="phone",
-                products_discussed=["Jardiance"], samples_dropped=[],
-                sentiment="neutral", key_topics=["reimbursement"],
-                summary="Phone call with Dr. Rao on Jardiance reimbursement; neutral, needs more data.",
-                raw_notes="Called Dr Rao about Jardiance reimbursement, neutral, asked for more outcome data.",
-                follow_up_needed=True, source="form",
-            ),
-        ])
+        await _migrate(conn)
 
 
 if __name__ == "__main__":
-    # Running this module directly always seeds the demo data.
-    asyncio.run(init_db(force_demo=True))
+    asyncio.run(init_db())

@@ -34,6 +34,9 @@ export default function InteractionList() {
             {(it.products_discussed || []).map((p) => (
               <span className="entity-chip" key={p}>💊 {p}</span>
             ))}
+            {(it.materials_shared || []).map((m) => (
+              <span className="entity-chip" key={`mat-${m}`}>📄 {m}</span>
+            ))}
             {(it.samples_dropped || []).map((s) => (
               <span className="entity-chip" key={s}>🎁 {s}</span>
             ))}

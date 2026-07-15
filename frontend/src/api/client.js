@@ -31,6 +31,8 @@ export const api = {
     request(`/api/v1/interactions${hcpId ? `?hcp_id=${hcpId}` : ''}`),
   createInteraction: (payload) =>
     request('/api/v1/interactions', { method: 'POST', body: JSON.stringify(payload) }),
+  extractInteraction: (payload) =>
+    request('/api/v1/interactions/extract', { method: 'POST', body: JSON.stringify(payload) }),
   updateInteraction: (id, patch) =>
     request(`/api/v1/interactions/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   listFollowups: (hcpId) =>
