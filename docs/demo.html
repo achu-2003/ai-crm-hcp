@@ -1,0 +1,900 @@
+<title>Meridian CRM — How-To Demo</title>
+<style>
+  /* ============================================================
+     THEATER CHROME
+     ============================================================ */
+  :root {
+    --thr-bg:#0a111e;--thr-panel:#101a2b;--thr-panel-2:#0d1524;--thr-line:#223247;--thr-line-soft:#1a2637;
+    --thr-ink:#eaf1fb;--thr-soft:#93a2bd;--thr-faint:#5f6f8c;--thr-accent:#22c1cf;--thr-accent-dim:#157e88;
+    --thr-glow:rgba(34,193,207,0.35);color-scheme:dark;
+  }
+  :root[data-theme="light"] {
+    --thr-bg:#dfe4ee;--thr-panel:#eef1f7;--thr-panel-2:#e6ebf3;--thr-line:#cbd3e2;--thr-line-soft:#d7deea;
+    --thr-ink:#10192b;--thr-soft:#4a5670;--thr-faint:#8b95a9;--thr-accent:#0e7c86;--thr-accent-dim:#6fb9bf;
+    --thr-glow:rgba(14,124,134,0.22);color-scheme:light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(1100px 620px at 50% -10%, rgba(34,193,207,0.10), transparent 60%), var(--thr-bg);
+    color: var(--thr-ink); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; padding: 18px 16px 22px; gap: 13px;
+  }
+  .stage-head { width: 100%; max-width: 1240px; display: flex; align-items: center; gap: 14px; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; background: linear-gradient(135deg,#0e7c86,#4f46e5); display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 16px; box-shadow: 0 4px 14px var(--thr-glow); }
+  .stage-head .t { line-height: 1.2; }
+  .stage-head .t b { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .stage-head .t span { display: block; color: var(--thr-faint); font-size: 11.5px; font-weight: 500; }
+  .head-spacer { flex: 1; }
+  .live-tag { display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--thr-soft); border: 1px solid var(--thr-line); border-radius: 999px; padding: 5px 12px; background: var(--thr-panel-2); }
+  .live-tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--thr-accent); box-shadow: 0 0 0 3px var(--thr-glow); font-style: normal; }
+  .theme-btn { border: 1px solid var(--thr-line); background: var(--thr-panel-2); color: var(--thr-soft); border-radius: 9px; padding: 7px 11px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .theme-btn:hover { color: var(--thr-ink); border-color: var(--thr-accent-dim); }
+
+  /* ---- two-column player: video left, explanations right ---- */
+  .player {
+    width: 100%; max-width: 1240px;
+    display: grid; grid-template-columns: minmax(0,1fr) 384px; align-items: stretch;
+    background: linear-gradient(180deg,var(--thr-panel),var(--thr-panel-2));
+    border: 1px solid var(--thr-line); border-radius: 18px; overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .video-col { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--thr-line); }
+  .frame-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--thr-panel-2); border-bottom: 1px solid var(--thr-line-soft); }
+  .dots { display: flex; gap: 7px; }
+  .dots i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .dots i:nth-child(1){ background:#f0695b; } .dots i:nth-child(2){ background:#f4bf4f; } .dots i:nth-child(3){ background:#63c563; }
+  .url { flex: 1; max-width: 340px; margin: 0 auto; background: var(--thr-bg); border: 1px solid var(--thr-line-soft); border-radius: 8px; color: var(--thr-soft); font-size: 11px; padding: 5px 12px; text-align: center; }
+  .url b { color: var(--thr-ink); font-weight: 600; }
+  .screen { position: relative; width: 100%; background: #eef1f7; overflow: hidden; }
+  .screen-scaler { transform-origin: top left; }
+
+  .transport { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--thr-line-soft); background: var(--thr-panel); margin-top: auto; }
+  .tbtn { border: 1px solid var(--thr-line); background: var(--thr-panel-2); color: var(--thr-ink); width: 36px; height: 36px; border-radius: 9px; cursor: pointer; display: grid; place-items: center; font-family: inherit; transition: all 0.14s ease; }
+  .tbtn:hover { border-color: var(--thr-accent-dim); color: var(--thr-accent); }
+  .tbtn svg { width: 15px; height: 15px; fill: currentColor; }
+  .tbtn.play { width: 42px; height: 42px; background: var(--thr-accent); border-color: var(--thr-accent); color: #041016; }
+  .tbtn.play:hover { filter: brightness(1.08); color: #041016; }
+  .time { font-size: 11.5px; color: var(--thr-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .time b { color: var(--thr-ink); font-weight: 600; }
+  .scrub { flex: 1; height: 28px; position: relative; cursor: pointer; display: flex; align-items: center; }
+  .scrub-track { position: absolute; left: 0; right: 0; height: 6px; border-radius: 999px; background: var(--thr-line); overflow: hidden; }
+  .scrub-fill { height: 100%; width: 0%; background: linear-gradient(90deg,var(--thr-accent-dim),var(--thr-accent)); }
+  .scrub-ticks { position: absolute; inset: 0; }
+  .scrub-ticks i { position: absolute; top: 50%; width: 2px; height: 11px; transform: translate(-50%,-50%); background: var(--thr-panel); border-radius: 1px; }
+
+  /* ---- right: explanations panel ---- */
+  .explain-col { position: relative; min-width: 0; min-height: 0; background: var(--thr-panel); overflow: hidden; }
+  .explain-inner { position: absolute; inset: 0; overflow-y: auto; padding: 18px 20px 20px; display: flex; flex-direction: column; }
+  .explain-inner::-webkit-scrollbar { width: 8px; }
+  .explain-inner::-webkit-scrollbar-thumb { background: var(--thr-line); border-radius: 8px; }
+  .ex-kicker { font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--thr-accent); }
+  .ex-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin-top: 5px; color: var(--thr-ink); }
+  .ex-rule { height: 1px; background: var(--thr-line-soft); margin: 15px 0; }
+
+  .ex-step { flex: 1 0 auto; }
+  .ex-topline { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ex-num { font-size: 30px; font-weight: 800; color: var(--thr-accent); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1; }
+  .ex-num span { font-size: 13px; color: var(--thr-faint); font-weight: 700; }
+  .ex-sec { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--thr-soft);
+    border: 1px solid var(--thr-line); border-radius: 999px; padding: 5px 11px; }
+  .ex-action { font-size: 21px; font-weight: 700; line-height: 1.28; letter-spacing: -0.015em; color: var(--thr-ink); text-wrap: balance; }
+  .ex-action b { color: var(--thr-accent); font-weight: 700; }
+  .ex-detail { font-size: 14px; color: var(--thr-soft); line-height: 1.62; margin-top: 14px; }
+  .ex-detail b { color: var(--thr-ink); font-weight: 600; }
+  :root[data-theme="light"] .ex-action b { color: var(--thr-accent-dim); }
+
+  .ex-chap-label { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--thr-faint); margin-bottom: 9px; }
+  .chapters { display: flex; flex-direction: column; gap: 5px; }
+  .chapter { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    border: 1px solid transparent; background: transparent; color: var(--thr-soft); border-radius: 9px;
+    padding: 8px 10px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; transition: all 0.14s ease; }
+  .chapter:hover { background: var(--thr-panel-2); color: var(--thr-ink); }
+  .chapter .num { width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px; background: var(--thr-panel-2); border: 1px solid var(--thr-line);
+    display: grid; place-items: center; font-size: 10px; font-weight: 800; color: var(--thr-faint); font-variant-numeric: tabular-nums; }
+  .chapter.on { background: var(--thr-accent); color: #041016; }
+  .chapter.on .num { background: rgba(4,16,22,0.18); border-color: transparent; color: #041016; }
+
+  .foot { width: 100%; max-width: 1240px; color: var(--thr-faint); font-size: 11.5px; line-height: 1.6; display: flex; gap: 8px; align-items: flex-start; }
+  .foot b { color: var(--thr-soft); font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .player { grid-template-columns: 1fr; }
+    .video-col { border-right: none; border-bottom: 1px solid var(--thr-line); }
+    .explain-inner { max-height: 360px; }
+  }
+
+  /* ============================================================
+     PRODUCT SCREEN — faithful subset of the real theme.css
+     ============================================================ */
+  .mcrm {
+    --bg:#eef1f7;--surface:#ffffff;--surface-2:#f7f9fc;--surface-3:#f0f3f9;--border:#e4e8f0;--border-strong:#d3d9e6;
+    --text:#10192b;--text-soft:#56617a;--text-faint:#8b95a9;--brand:#0e7c86;--brand-600:#0a636b;--brand-700:#084e55;
+    --brand-50:#e4f3f4;--brand-100:#cde9eb;--indigo:#4f46e5;--indigo-600:#4338ca;--indigo-50:#eef0fe;
+    --pos:#0f9d6b;--pos-bg:#e2f6ed;--neu:#b0791f;--neu-bg:#fbf1dd;--neg:#d1495b;--neg-bg:#fbe6e9;
+    --shadow-sm:0 1px 2px rgba(16,25,43,0.06);
+    width: 1160px; height: 640px; background: linear-gradient(180deg,#eef1f7,#e7ebf3); color: var(--text);
+    position: relative; overflow: hidden; display: flex; flex-direction: column; font-size: 14px; line-height: 1.5;
+  }
+  .mcrm .topbar { display: flex; align-items: center; gap: 13px; padding: 0 20px; height: 54px; flex-shrink: 0; background: rgba(255,255,255,0.92); border-bottom: 1px solid var(--border); z-index: 5; }
+  .mcrm .bmark { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,var(--brand),var(--indigo)); display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px; }
+  .mcrm .bname { font-weight: 700; font-size: 14.5px; letter-spacing: -0.02em; }
+  .mcrm .bsub { color: var(--text-faint); font-size: 11px; font-weight: 500; }
+  .mcrm .nav { display: flex; gap: 4px; margin-left: 14px; background: var(--surface-3); padding: 4px; border-radius: 11px; }
+  .mcrm .nav-item { display: flex; align-items: center; gap: 6px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; font-size: 12.5px; padding: 7px 14px; border-radius: 8px; font-family: inherit; }
+  .mcrm .nav-item.active { background: var(--surface); color: var(--brand-600); box-shadow: var(--shadow-sm); }
+  .mcrm .sp { flex: 1; }
+  .mcrm .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--brand-50); color: var(--brand-700); border: 1px solid var(--brand-100); }
+  .mcrm .pill .d { width: 7px; height: 7px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 0 3px rgba(15,157,107,0.18); }
+  .mcrm .pill.muted { background: var(--indigo-50); color: var(--indigo-600); border-color: #dce0fb; }
+
+  .mcrm .work { flex: 1; display: grid; grid-template-columns: 244px 1fr; min-height: 0; }
+  .mcrm .side { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 12px; overflow: hidden; }
+  .mcrm .side-head { display: flex; align-items: center; margin: 4px 6px 10px; }
+  .mcrm .side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-weight: 700; margin: 0; }
+  .mcrm .add-btn { margin-left: auto; border: 1px solid var(--brand-100); background: var(--brand-50); color: var(--brand-700); font-weight: 700; font-size: 11px; padding: 4px 9px; border-radius: 8px; font-family: inherit; }
+  .mcrm .hcp-card { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 11px; border: 1px solid transparent; margin-bottom: 3px; }
+  .mcrm .hcp-card.active { background: var(--brand-50); border-color: var(--brand-100); }
+  .mcrm .avatar { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; font-weight: 700; color: #fff; font-size: 13px; }
+  .mcrm .hcp-name { font-weight: 600; font-size: 13px; }
+  .mcrm .hcp-spec { color: var(--text-soft); font-size: 11.5px; }
+  .mcrm .tier { font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 6px; }
+  .mcrm .tier.A { background: var(--pos-bg); color: var(--pos); }
+  .mcrm .tier.B { background: var(--indigo-50); color: var(--indigo); }
+
+  .mcrm .mainview { position: relative; overflow: hidden; }
+  .mcrm .scroll { position: absolute; inset: 0; padding: 20px 24px; transition: transform 0.9s cubic-bezier(.5,0,.15,1); }
+  .mcrm.reduce .scroll { transition: none; }
+
+  .mcrm .ptitle { font-size: 21px; font-weight: 800; letter-spacing: -0.025em; }
+  .mcrm .psub { color: var(--text-soft); font-size: 12.5px; margin-top: 2px; }
+
+  .mcrm .hero { display: flex; gap: 13px; align-items: center; padding: 14px 16px; margin: 16px 0 16px; background: linear-gradient(120deg,#fff 30%,var(--brand-50)); border: 1px solid var(--border); border-radius: 16px; }
+  .mcrm .hero .avatar { width: 44px; height: 44px; }
+  .mcrm .hero-facts { display: flex; gap: 24px; margin-left: auto; text-align: right; }
+  .mcrm .fl { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .mcrm .fv { font-weight: 600; font-size: 13px; margin-top: 2px; }
+  .mcrm .mini-chip { font-size: 10.5px; font-weight: 500; padding: 3px 8px; border-radius: 7px; background: #fff; border: 1px solid var(--border-strong); color: var(--text-soft); }
+  .mcrm .chip-row { display: flex; gap: 6px; margin-top: 6px; }
+
+  .mcrm .cols { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; align-items: start; }
+  .mcrm .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+  .mcrm .cpad { padding: 18px; }
+
+  .mcrm .form-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .mcrm .form-head .ptitle { font-size: 17px; }
+  .mcrm .edit-badge { display: none; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--indigo-50); color: #3f3aa8; border: 1px solid #dce0fb; }
+  .mcrm .edit-badge.show { display: inline-flex; }
+  .mcrm .enrich { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 11px; background: var(--indigo-50); border: 1px solid #dce0fb; color: #3f3aa8; font-size: 12px; margin-bottom: 14px; line-height: 1.45; }
+  .mcrm .seclabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .mcrm .field { margin-bottom: 13px; }
+  .mcrm .field > label { display: block; font-size: 12px; font-weight: 600; color: var(--text-soft); margin-bottom: 5px; }
+  .mcrm .field .hint { font-weight: 400; color: var(--text-faint); }
+  .mcrm .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mcrm .inp { width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 11px; font-size: 13px; color: var(--text); background: var(--surface); min-height: 38px; font-family: inherit; display: flex; align-items: center; }
+  .mcrm .inp.readonly { background: var(--surface-3); color: var(--text-soft); }
+  .mcrm .inp.ta { display: block; min-height: 46px; line-height: 1.5; color: var(--text-faint); }
+  .mcrm .inp.ta.has { color: var(--text); }
+  .mcrm .inp .ph { color: var(--text-faint); }
+
+  .mcrm .ai { border-color: var(--brand) !important; background: var(--brand-50) !important; color: var(--text) !important; }
+  .mcrm .ai.pulse { animation: aipulse 1.5s ease-out; }
+  @keyframes aipulse { 0%{box-shadow:0 0 0 0 rgba(14,124,134,0.35);} 35%{box-shadow:0 0 0 5px rgba(14,124,134,0.12);} 100%{box-shadow:0 0 0 0 rgba(0,0,0,0);} }
+  .mcrm.reduce .ai.pulse { animation: none; }
+
+  .mcrm .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+  .mcrm .tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 11px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--border-strong); font-size: 12px; font-weight: 500; color: var(--text); }
+  .mcrm .tag.ai { background: var(--brand-50); border-color: var(--brand-100); color: var(--brand-700); }
+  .mcrm .tag.pop { animation: tagpop 0.35s ease; }
+  @keyframes tagpop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .mcrm.reduce .tag.pop { animation: none; }
+  .mcrm .tag .x { color: var(--text-faint); font-size: 14px; line-height: 1; }
+  .mcrm .chip-empty { color: var(--text-faint); font-size: 12.5px; }
+  .mcrm .suggest { display: flex; gap: 6px; margin-top: 8px; }
+  .mcrm .schip { border: 1px dashed var(--border-strong); color: var(--text-faint); font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 999px; }
+
+  .mcrm .radio-row { display: flex; gap: 8px; }
+  .mcrm .ropt { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 12.5px; font-weight: 500; color: var(--text-soft); }
+  .mcrm .ropt.on { border-color: var(--brand); background: var(--brand-50); color: var(--text); font-weight: 600; }
+  .mcrm .ropt.on.pos { border-color: var(--pos); background: var(--pos-bg); color: var(--pos); }
+  .mcrm .ropt.on.neu { border-color: var(--neu); background: var(--neu-bg); color: var(--neu); }
+  .mcrm .ropt.on.neg { border-color: var(--neg); background: var(--neg-bg); color: var(--neg); }
+
+  .mcrm .voice { margin: 2px 0 14px; display: flex; flex-direction: column; gap: 8px; }
+  .mcrm .vlink { display: inline-flex; align-items: center; gap: 7px; color: var(--brand-600); font-size: 12.5px; font-weight: 600; }
+  .mcrm .vlink.live { color: var(--neg); }
+  .mcrm .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neg); animation: rec 1.1s ease-in-out infinite; }
+  @keyframes rec { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+  .mcrm.reduce .rec-dot { animation: none; }
+  .mcrm .consent { padding: 12px 14px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--border-strong); }
+  .mcrm .consent .ct { font-weight: 700; font-size: 12.5px; margin-bottom: 5px; }
+  .mcrm .consent p { font-size: 12px; color: var(--text-soft); line-height: 1.5; margin: 0 0 10px; }
+  .mcrm .consent .btnrow { display: flex; gap: 8px; }
+  .mcrm .transcript { padding: 11px 13px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--border); }
+  .mcrm .tlabel { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--neg); margin-bottom: 6px; }
+  .mcrm .tlabel.done { color: var(--brand-600); }
+  .mcrm .ttext { font-size: 12.5px; line-height: 1.5; color: var(--text); }
+
+  .mcrm .btn { border: none; border-radius: 11px; padding: 10px 16px; font-weight: 600; font-size: 13px; background: var(--brand); color: #fff; display: inline-flex; align-items: center; gap: 7px; font-family: inherit; box-shadow: var(--shadow-sm); }
+  .mcrm .btn.ghost { background: transparent; color: var(--brand-600); border: 1px solid var(--border-strong); box-shadow: none; }
+  .mcrm .btn.sm { padding: 7px 12px; font-size: 12px; }
+  .mcrm .btnbar { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+  .mcrm .flash { color: var(--pos); font-weight: 600; font-size: 12.5px; opacity: 0; }
+  .mcrm .flash.show { opacity: 1; }
+
+  .mcrm .chat { display: flex; flex-direction: column; height: 566px; }
+  .mcrm .ahead { padding-bottom: 11px; margin-bottom: 11px; border-bottom: 1px solid var(--border); position: relative; }
+  .mcrm .atitle { font-size: 15px; font-weight: 700; color: var(--brand-600); }
+  .mcrm .asub { font-size: 12px; color: var(--text-faint); margin-top: 1px; }
+  .mcrm .netchip { position: absolute; right: 0; top: 0; font-size: 10.5px; font-weight: 700; font-family: ui-monospace, monospace; padding: 4px 9px; border-radius: 7px; background: #10192b; color: #7ef0c0; opacity: 0; transform: translateY(-4px); transition: all 0.3s ease; }
+  .mcrm .netchip.show { opacity: 1; transform: none; }
+  .mcrm .chat-scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
+  .mcrm .hintbox { padding: 11px 13px; border-radius: 12px; background: var(--brand-50); font-size: 12px; line-height: 1.5; color: var(--text-soft); }
+  .mcrm .msg { max-width: 84%; padding: 10px 13px; border-radius: 14px; font-size: 12.8px; line-height: 1.5; box-shadow: var(--shadow-sm); }
+  .mcrm .msg.user { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
+  .mcrm .msg.bot { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .mcrm .msg.enter { animation: msgin 0.35s ease; }
+  @keyframes msgin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .mcrm.reduce .msg.enter, .mcrm.reduce .ti.enter, .mcrm.reduce .fu.enter { animation: none; }
+  .mcrm .toolchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .mcrm .tchip { font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #fff; border: 1px solid var(--border-strong); color: var(--text-soft); }
+  .mcrm .tchip.tool { background: var(--indigo-50); color: var(--indigo); border-color: #dce0fb; }
+  .mcrm .typing { align-self: flex-start; display: inline-flex; gap: 4px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; }
+  .mcrm .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); animation: blink 1.2s infinite; }
+  .mcrm .typing i:nth-child(2){ animation-delay: 0.2s; } .mcrm .typing i:nth-child(3){ animation-delay: 0.4s; }
+  @keyframes blink { 0%,60%,100%{opacity:0.25;} 30%{opacity:1;} }
+  .mcrm.reduce .typing i { animation: none; opacity: 0.5; }
+  .mcrm .chat-input { display: flex; gap: 9px; margin-top: 10px; }
+  .mcrm .chat-input .inp { flex: 1; }
+  .mcrm .suggestion-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .mcrm .suggestion { font-size: 11.5px; padding: 7px 11px; border-radius: 999px; border: 1px dashed var(--border-strong); background: var(--surface); color: var(--text-soft); }
+
+  .mcrm .lower { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+  .mcrm .lhead { display: flex; align-items: center; margin-bottom: 10px; }
+  .mcrm .lhead h3 { font-size: 13.5px; font-weight: 700; margin: 0; }
+  .mcrm .count { margin-left: 8px; font-size: 10.5px; font-weight: 700; color: var(--text-soft); background: var(--surface-3); padding: 2px 8px; border-radius: 999px; }
+  .mcrm .ti { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .mcrm .ti:last-child { border-bottom: none; }
+  .mcrm .ti.enter { animation: msgin 0.4s ease; }
+  .mcrm .ti-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .mcrm .type-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--brand-50); color: var(--brand-700); text-transform: capitalize; }
+  .mcrm .ti-date { color: var(--text-faint); font-size: 11.5px; }
+  .mcrm .ti-edit { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--brand-600); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px 9px; }
+  .mcrm .stag { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: capitalize; }
+  .mcrm .stag.positive { background: var(--pos-bg); color: var(--pos); }
+  .mcrm .stag.neutral { background: var(--neu-bg); color: var(--neu); }
+  .mcrm .stag.negative { background: var(--neg-bg); color: var(--neg); }
+  .mcrm .ti-sum { font-size: 12.5px; color: var(--text); line-height: 1.5; margin-top: 4px; }
+  .mcrm .fucard { border-left: 3px solid var(--neu); }
+  .mcrm .fu { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .mcrm .fu:last-child { border-bottom: none; }
+  .mcrm .fu.enter { animation: msgin 0.4s ease; }
+  .mcrm .fu-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--neu); flex-shrink: 0; }
+  .mcrm .fu-p { font-size: 12.5px; font-weight: 600; }
+  .mcrm .fu-d { font-size: 11.5px; color: var(--text-faint); margin-top: 1px; }
+  .mcrm .empty { color: var(--text-faint); font-size: 12px; padding: 14px 0; text-align: center; }
+
+  .mcrm .spot { position: relative; z-index: 4; box-shadow: 0 0 0 3px var(--brand), 0 0 0 9px rgba(14,124,134,0.16), 0 14px 40px rgba(16,25,43,0.18) !important; border-radius: 14px; transition: box-shadow 0.4s ease; }
+  .mcrm.reduce .spot { transition: none; }
+
+  .mcrm .dash { position: absolute; inset: 0; background: linear-gradient(180deg,var(--bg),#e7ebf3); padding: 20px 24px; overflow: hidden; display: none; }
+  .mcrm .dash.show { display: block; animation: msgin 0.4s ease; }
+  .mcrm.reduce .dash.show { animation: none; }
+  .mcrm .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin: 14px 0 16px; }
+  .mcrm .kpi { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 15px 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+  .mcrm .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand); }
+  .mcrm .kpi.indigo::before { background: var(--indigo); } .mcrm .kpi.pos::before { background: var(--pos); } .mcrm .kpi.neu::before { background: var(--neu); }
+  .mcrm .kpi .ic { font-size: 17px; }
+  .mcrm .kpi .val { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-top: 6px; }
+  .mcrm .kpi .lab { color: var(--text-soft); font-size: 11.5px; margin-top: 5px; }
+  .mcrm .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .mcrm .stacked { display: flex; gap: 2px; height: 28px; border-radius: 8px; overflow: hidden; background: var(--surface-3); margin: 8px 0 12px; }
+  .mcrm .legend { display: flex; gap: 16px; flex-wrap: wrap; }
+  .mcrm .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-soft); }
+  .mcrm .legend-dot { width: 9px; height: 9px; border-radius: 3px; }
+  .mcrm .bar-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .mcrm .bar-row { display: grid; grid-template-columns: 58px 1fr 24px; align-items: center; gap: 10px; }
+  .mcrm .bar-label { font-size: 11.5px; color: var(--text-soft); text-transform: capitalize; }
+  .mcrm .bar-track { height: 9px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+  .mcrm .bar-fill { height: 100%; border-radius: 999px; background: var(--brand); }
+  .mcrm .bar-val { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .mcrm .modal-overlay { position: absolute; inset: 0; background: rgba(16,25,43,0.5); display: none; align-items: center; justify-content: center; z-index: 20; padding: 20px; }
+  .mcrm .modal-overlay.show { display: flex; animation: msgin 0.3s ease; }
+  .mcrm.reduce .modal-overlay.show { animation: none; }
+  .mcrm .modal { width: 460px; background: var(--surface); border-radius: 16px; box-shadow: 0 20px 56px rgba(16,25,43,0.3); overflow: hidden; }
+  .mcrm .modal-head { display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .mcrm .modal-head h3 { font-size: 14.5px; margin: 0; }
+  .mcrm .modal-head .x { margin-left: auto; color: var(--text-faint); font-size: 20px; }
+  .mcrm .modal-body { padding: 18px; }
+  .mcrm .modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 18px; border-top: 1px solid var(--border); }
+
+  .mcrm .overlay { position: absolute; inset: 0; z-index: 30; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 36px; background: linear-gradient(150deg,#0c1424 0%,#10233a 55%,#113b41 100%); color: #eaf1fb; }
+  .mcrm .overlay.show { display: flex; animation: fadeover 0.5s ease; }
+  @keyframes fadeover { from { opacity: 0; } to { opacity: 1; } }
+  .mcrm.reduce .overlay.show { animation: none; }
+  .mcrm .overlay .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: #35d0dd; margin-bottom: 16px; }
+  .mcrm .overlay h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; max-width: 18ch; line-height: 1.1; text-wrap: balance; }
+  .mcrm .overlay h1 .g { background: linear-gradient(100deg,#35d0dd,#8b8cf7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mcrm .overlay p { color: #9fb0cb; font-size: 15px; line-height: 1.6; max-width: 54ch; margin-top: 14px; text-wrap: balance; }
+  .mcrm .steps-list { display: flex; flex-direction: column; gap: 9px; margin-top: 22px; text-align: left; }
+  .mcrm .steps-list .s { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: #cdd8ea; }
+  .mcrm .steps-list .n { width: 25px; height: 25px; border-radius: 8px; background: rgba(53,208,221,0.15); border: 1px solid rgba(53,208,221,0.4); color: #35d0dd; display: grid; place-items: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+
+  @media (prefers-reduced-motion: reduce) { .scrub-fill { transition: none !important; } }
+</style>
+
+<div class="stage-head">
+  <div class="logo">M</div>
+  <div class="t"><b>Meridian CRM — How-To Guide</b><span>Video on the left · explanation on the right</span></div>
+  <div class="head-spacer"></div>
+  <span class="live-tag"><i></i> Guided tutorial</span>
+  <button class="theme-btn" id="themeBtn">☀ Theater</button>
+</div>
+
+<div class="player">
+  <!-- LEFT: the video -->
+  <div class="video-col">
+    <div class="frame-bar">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url">🔒 localhost:5173 · <b>Meridian CRM</b></div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div class="screen" id="screen">
+      <div class="screen-scaler" id="scaler">
+        <div class="mcrm" id="mcrm">
+          <div class="topbar">
+            <div class="bmark">M</div>
+            <div><div class="bname">Meridian CRM</div><div class="bsub">AI-First · HCP Engagement</div></div>
+            <div class="nav">
+              <button class="nav-item" id="navDash">📊 Dashboard</button>
+              <button class="nav-item active" id="navLog">📝 Log Interaction</button>
+            </div>
+            <div class="sp"></div>
+            <span class="pill"><span class="d"></span>llama-3.3-70b-versatile</span>
+            <span class="pill muted">⚡ LangGraph</span>
+          </div>
+
+          <div class="work">
+            <div class="side" id="side">
+              <div class="side-head"><h2>Healthcare Professionals</h2><button class="add-btn" id="addBtn">+ Add</button></div>
+              <div class="hcp-card active">
+                <div class="avatar" style="background:#0e7c86">AM</div>
+                <div><div class="hcp-name">Dr. Ananya Mehta</div><div class="hcp-spec">Cardiology · Apollo</div></div>
+                <span class="tier A">A</span>
+              </div>
+              <div class="hcp-card">
+                <div class="avatar" style="background:#4f46e5">RK</div>
+                <div><div class="hcp-name">Dr. Rohan Kapoor</div><div class="hcp-spec">Oncology · Fortis</div></div>
+                <span class="tier B">B</span>
+              </div>
+            </div>
+
+            <div class="mainview">
+              <div class="scroll" id="scroll">
+                <div class="ptitle">Log Interaction</div>
+                <div class="psub">Describe the touchpoint to the assistant, dictate it, or fill the form — you confirm what gets saved.</div>
+
+                <div class="hero" id="hero">
+                  <div class="avatar" style="background:#0e7c86">AM</div>
+                  <div>
+                    <div class="hcp-name" style="font-size:14.5px">Dr. Ananya Mehta</div>
+                    <div class="hcp-spec">Cardiology · Apollo Hospitals</div>
+                    <div class="chip-row"><span class="mini-chip">💊 Cardizem</span><span class="mini-chip">💊 Brilinta</span></div>
+                  </div>
+                  <div class="hero-facts">
+                    <div><div class="fl">Tier</div><div class="fv"><span class="tier A">A</span></div></div>
+                    <div><div class="fl">City</div><div class="fv">Mumbai</div></div>
+                  </div>
+                </div>
+
+                <div class="cols">
+                  <div class="card cpad" id="formCard">
+                    <div class="form-head">
+                      <div class="ptitle">Log HCP Interaction</div>
+                      <span class="edit-badge" id="editBadge">Editing #1 ✕</span>
+                    </div>
+                    <div class="enrich">✨ <span><b>AI-assisted.</b> Describe the interaction to the assistant (or dictate a voice note) and these fields fill themselves. Anything you change by hand wins.</span></div>
+
+                    <div class="seclabel" style="margin-top:4px">Interaction Details</div>
+                    <div class="frow">
+                      <div class="field"><label>HCP Name</label><div class="inp readonly">Dr. Ananya Mehta</div></div>
+                      <div class="field"><label>Interaction Type</label><div class="inp" id="fType"><span class="ph">Select…</span></div></div>
+                    </div>
+                    <div class="frow">
+                      <div class="field"><label>Date</label><div class="inp" id="fDate"><span class="ph">—</span></div></div>
+                      <div class="field"><label>Time</label><div class="inp" id="fTime"><span class="ph">—</span></div></div>
+                    </div>
+                    <div class="field" id="attendField"><label>Attendees <span class="hint">— anyone else in the room</span></label><div id="fAttend"><div class="chips"><span class="chip-empty">—</span></div></div></div>
+                    <div class="field"><label>Topics Discussed</label><div class="inp ta" id="fTopics"><span class="ph">Enter key discussion points…</span></div></div>
+
+                    <div class="voice" id="voice"><span class="vlink">🎙 Summarize from Voice Note (Requires Consent)</span></div>
+
+                    <div class="seclabel">Materials Shared / Samples Distributed</div>
+                    <div class="field" id="matField"><label>Materials Shared</label><div id="fMaterials"><div class="chips"><span class="chip-empty">—</span></div><div class="suggest"><span class="schip">+ Brochure</span><span class="schip">+ Reprint</span><span class="schip">+ Slide deck</span></div></div></div>
+                    <div class="field"><label>Samples Distributed</label><div id="fSamples"><div class="chips"><span class="chip-empty">—</span></div><div class="suggest"><span class="schip">+ Cardizem</span><span class="schip">+ Brilinta</span></div></div></div>
+
+                    <div class="field"><label>Observed / Inferred HCP Sentiment</label>
+                      <div class="radio-row" id="fSent">
+                        <span class="ropt" data-s="positive">🙂 Positive</span>
+                        <span class="ropt" data-s="neutral">😐 Neutral</span>
+                        <span class="ropt" data-s="negative">🙁 Negative</span>
+                      </div>
+                    </div>
+                    <div class="field"><label>Outcomes</label><div class="inp ta" id="fOutcomes"><span class="ph">Key outcomes or agreements…</span></div></div>
+                    <div class="field"><label>Follow-up Actions</label><div class="inp ta" id="fFollow"><span class="ph">Next steps — the assistant can schedule these…</span></div></div>
+
+                    <div class="btnbar">
+                      <button class="btn" id="submitBtn">✨ Log interaction</button>
+                      <button class="btn ghost">Clear</button>
+                      <span class="flash" id="flash">✓ Saved</span>
+                    </div>
+                  </div>
+
+                  <div class="card cpad chat" id="chatCard">
+                    <div class="ahead">
+                      <div class="atitle">🤖 AI Assistant</div>
+                      <div class="asub">Log interaction details here via chat</div>
+                      <span class="netchip" id="netchip">tool_used: "—"</span>
+                    </div>
+                    <div class="chat-scroll" id="chatScroll">
+                      <div class="hintbox">Describe the interaction in your own words and I'll fill in the form — or ask me for help.</div>
+                      <div class="suggestion-row">
+                        <span class="suggestion">Met Dr. Mehta, discussed Cardizem…</span>
+                        <span class="suggestion">What did we discuss recently?</span>
+                      </div>
+                    </div>
+                    <div class="chat-input" id="chatInput"><div class="inp"><span class="ph">Describe Interaction…</span></div><button class="btn">Log</button></div>
+                  </div>
+                </div>
+
+                <div class="lower">
+                  <div class="card cpad" id="timelineCard">
+                    <div class="lhead"><h3>Interaction History</h3><span class="count" id="tlCount">0</span></div>
+                    <div id="timeline"><div class="empty">No interactions logged yet.</div></div>
+                  </div>
+                  <div class="card cpad fucard" id="fuCard">
+                    <div class="lhead"><h3>Follow-ups</h3><span class="count" id="fuCount">0</span></div>
+                    <div id="followups"><div class="empty">No follow-ups scheduled.</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dash" id="dash">
+                <div class="ptitle">Dashboard</div>
+                <div class="psub">Your engagement at a glance — totals, sentiment and recent activity.</div>
+                <div class="kpi-row">
+                  <div class="kpi"><div class="ic">🩺</div><div class="val">24</div><div class="lab">HCPs tracked</div></div>
+                  <div class="kpi indigo"><div class="ic">📝</div><div class="val">138</div><div class="lab">Interactions logged</div></div>
+                  <div class="kpi pos"><div class="ic">🙂</div><div class="val">71%</div><div class="lab">Positive sentiment</div></div>
+                  <div class="kpi neu"><div class="ic">⏰</div><div class="val">6</div><div class="lab">Follow-ups due</div></div>
+                </div>
+                <div class="dash-grid">
+                  <div class="card cpad">
+                    <div class="lhead"><h3>Sentiment breakdown</h3></div>
+                    <div class="stacked"><div style="width:71%;background:var(--pos)"></div><div style="width:19%;background:var(--neu)"></div><div style="width:10%;background:var(--neg)"></div></div>
+                    <div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--pos)"></span>Positive 98</span><span class="legend-item"><span class="legend-dot" style="background:var(--neu)"></span>Neutral 26</span><span class="legend-item"><span class="legend-dot" style="background:var(--neg)"></span>Negative 14</span></div>
+                  </div>
+                  <div class="card cpad">
+                    <div class="lhead"><h3>Interactions by type</h3></div>
+                    <div class="bar-list">
+                      <div class="bar-row"><span class="bar-label">Meeting</span><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><span class="bar-val">44</span></div>
+                      <div class="bar-row"><span class="bar-label">Call</span><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div><span class="bar-val">34</span></div>
+                      <div class="bar-row"><span class="bar-label">Visit</span><div class="bar-track"><div class="bar-fill" style="width:48%"></div></div><span class="bar-val">27</span></div>
+                      <div class="bar-row"><span class="bar-label">Email</span><div class="bar-track"><div class="bar-fill" style="width:34%"></div></div><span class="bar-val">19</span></div>
+                      <div class="bar-row"><span class="bar-label">Virtual</span><div class="bar-track"><div class="bar-fill" style="width:24%"></div></div><span class="bar-val">14</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-overlay" id="modal">
+            <div class="modal">
+              <div class="modal-head"><h3>Add Healthcare Professional</h3><span class="x">×</span></div>
+              <div class="modal-body">
+                <div class="frow"><div class="field"><label>Name</label><div class="inp">Dr. Priya Nair</div></div><div class="field"><label>Specialty</label><div class="inp">Endocrinology</div></div></div>
+                <div class="frow"><div class="field"><label>Institution</label><div class="inp">Manipal Hospital</div></div><div class="field"><label>Tier</label><div class="inp">A</div></div></div>
+                <div class="field"><label>Preferred products</label><div class="chips"><span class="tag">Glargine<span class="x">×</span></span><span class="tag">Metformin<span class="x">×</span></span></div></div>
+              </div>
+              <div class="modal-foot"><button class="btn ghost sm">Cancel</button><button class="btn sm" id="modalSave">Add HCP</button></div>
+            </div>
+          </div>
+
+          <div class="overlay" id="overlay"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button class="tbtn" id="prevBtn" title="Previous step" aria-label="Previous step"><svg viewBox="0 0 24 24"><path d="M7 6h2v12H7zm3 6l8 6V6z"/></svg></button>
+      <button class="tbtn play" id="playBtn" title="Play / pause" aria-label="Play or pause"><svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+      <button class="tbtn" id="nextBtn" title="Next step" aria-label="Next step"><svg viewBox="0 0 24 24"><path d="M15 6h2v12h-2zm-1 6L6 6v12z"/></svg></button>
+      <span class="time"><b id="tCur">0:00</b> / <span id="tTot">0:00</span></span>
+      <div class="scrub" id="scrub"><div class="scrub-track"><div class="scrub-fill" id="scrubFill"></div></div><div class="scrub-ticks" id="scrubTicks"></div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: the explanation -->
+  <div class="explain-col">
+    <div class="explain-inner">
+      <div class="ex-kicker">Guided tutorial</div>
+      <div class="ex-title">How to use Meridian CRM</div>
+      <div class="ex-rule"></div>
+
+      <div class="ex-step">
+        <div class="ex-topline">
+          <div class="ex-num" id="capNum">01<span>/20</span></div>
+          <div class="ex-sec" id="capSec">Welcome</div>
+        </div>
+        <div class="ex-action" id="capAction"></div>
+        <div class="ex-detail" id="capDetail"></div>
+      </div>
+
+      <div class="ex-rule"></div>
+      <div class="ex-chap-label">Jump to a section</div>
+      <div class="chapters" id="chapters"></div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <span>ℹ️</span>
+  <span>A <b>guided, scripted tutorial</b> of the real Log Interaction app — UI, palette and class names come from the project's <b>theme.css</b>. Runs on a canned script (no live backend), built to be screen-recorded. The <b>left</b> is the app; the <b>right</b> explains each step.</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var mcrm = document.getElementById("mcrm");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) mcrm.classList.add("reduce");
+
+  function $(id) { return document.getElementById(id); }
+  function q(sel) { return mcrm.querySelector(sel); }
+
+  function aiField(id, val) { var e = $(id); e.textContent = val; e.classList.remove("ai", "pulse"); void e.offsetWidth; e.classList.add("ai", "pulse"); }
+  function chips(id, arr, ai, suggestHTML) {
+    var e = $(id);
+    var inner = '<div class="chips' + (ai ? " ai pulse" : "") + '">';
+    if (!arr.length) inner += '<span class="chip-empty">—</span>';
+    else inner += arr.map(function (t) { return '<span class="tag' + (ai ? " ai pop" : " pop") + '">' + t + '<span class="x">×</span></span>'; }).join("");
+    inner += "</div>";
+    if (suggestHTML) inner += suggestHTML;
+    e.innerHTML = inner;
+    if (ai) { var c = e.querySelector(".chips"); c.classList.remove("pulse"); void c.offsetWidth; c.classList.add("pulse"); }
+  }
+  function sentiment(val) { q("#fSent").querySelectorAll(".ropt").forEach(function (o) { var on = o.getAttribute("data-s") === val; o.className = "ropt" + (on ? " on " + val.slice(0, 3) : ""); }); }
+  function button(label, editing) { $("submitBtn").innerHTML = label; $("editBadge").classList.toggle("show", !!editing); }
+  function flash(on) { $("flash").classList.toggle("show", !!on); }
+  function net(tool) { var n = $("netchip"); if (!tool) { n.classList.remove("show"); return; } n.textContent = 'tool_used: "' + tool + '"'; n.classList.remove("show"); void n.offsetWidth; n.classList.add("show"); }
+  function pan(y) { $("scroll").style.transform = "translateY(" + y + "px)"; }
+  // Scroll the app so `sel` sits near the top of the viewport. Measures the real
+  // element position (design px, since offsetTop is transform-independent) and
+  // clamps so content never slides down past the top or up past the bottom.
+  function focusEl(sel, margin) {
+    var el = q(sel); if (!el) { pan(0); return; }
+    var offset = el.offsetTop;                 // px from top of #scroll
+    var viewportH = 586;                        // mainview design height (640 - 54 topbar)
+    var maxPan = Math.max(0, $("scroll").scrollHeight - viewportH + 20);
+    var target = Math.min(Math.max(offset - (margin == null ? 20 : margin), 0), maxPan);
+    pan(-target);
+  }
+  function spot(list) { (list || []).forEach(function (sel) { var el = q(sel); if (el) el.classList.add("spot"); }); }
+  function view(v) { $("dash").classList.toggle("show", v === "dash"); $("scroll").style.display = v === "dash" ? "none" : "block"; $("navDash").classList.toggle("active", v === "dash"); $("navLog").classList.toggle("active", v !== "dash"); }
+  function modal(on) { $("modal").classList.toggle("show", !!on); }
+
+  function chatHTML(msgs, typing) {
+    var h = '<div class="hintbox">Describe the interaction in your own words and I’ll fill in the form — or ask me for help.</div>';
+    if (!msgs.length && !typing) h += '<div class="suggestion-row"><span class="suggestion">Met Dr. Mehta, discussed Cardizem…</span><span class="suggestion">What did we discuss recently?</span></div>';
+    msgs.forEach(function (m) {
+      h += '<div class="msg ' + m.role + ' enter">' + m.text;
+      if (m.chips) { h += '<div class="toolchips">'; m.chips.forEach(function (c) { h += '<span class="tchip' + (c.tool ? " tool" : "") + '">' + c.label + "</span>"; }); h += "</div>"; }
+      h += "</div>";
+    });
+    if (typing) h += '<div class="typing"><i></i><i></i><i></i></div>';
+    return h;
+  }
+  function setChat(msgs, typing) { $("chatScroll").innerHTML = chatHTML(msgs, typing); }
+  function setTimeline(items) {
+    var e = $("timeline"); $("tlCount").textContent = items.length;
+    if (!items.length) { e.innerHTML = '<div class="empty">No interactions logged yet.</div>'; return; }
+    e.innerHTML = items.map(function (it) {
+      return '<div class="ti enter"><div class="ti-top"><span class="type-badge">' + it.type + '</span><span class="ti-date">' + it.date + '</span><span class="stag ' + it.sent + '">' + it.sent + '</span>'
+        + (it.edit ? '<span class="ti-edit">✏ Edit</span>' : '') + '</div><div class="ti-sum">' + it.sum + "</div></div>";
+    }).join("");
+  }
+  function setFollowups(items) {
+    var e = $("followups"); $("fuCount").textContent = items.length;
+    if (!items.length) { e.innerHTML = '<div class="empty">No follow-ups scheduled.</div>'; return; }
+    e.innerHTML = items.map(function (f) { return '<div class="fu enter"><span class="fu-dot"></span><div><div class="fu-p">' + f.p + '</div><div class="fu-d">' + f.d + "</div></div></div>"; }).join("");
+  }
+  function overlay(html) { var o = $("overlay"); if (!html) { o.classList.remove("show"); o.innerHTML = ""; return; } o.innerHTML = html; o.classList.add("show"); }
+
+  var timers = [];
+  function later(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  function resetStage() {
+    clearTimers(); overlay(""); modal(false); view("log");
+    mcrm.querySelectorAll(".spot").forEach(function (e) { e.classList.remove("spot"); });
+    $("fType").innerHTML = '<span class="ph">Select…</span>'; $("fType").className = "inp";
+    $("fDate").innerHTML = '<span class="ph">—</span>'; $("fDate").className = "inp";
+    $("fTime").innerHTML = '<span class="ph">—</span>'; $("fTime").className = "inp";
+    chips("fAttend", [], false);
+    $("fTopics").innerHTML = '<span class="ph">Enter key discussion points…</span>'; $("fTopics").className = "inp ta";
+    $("fOutcomes").innerHTML = '<span class="ph">Key outcomes or agreements…</span>'; $("fOutcomes").className = "inp ta";
+    $("fFollow").innerHTML = '<span class="ph">Next steps — the assistant can schedule these…</span>'; $("fFollow").className = "inp ta";
+    chips("fMaterials", [], false, '<div class="suggest"><span class="schip">+ Brochure</span><span class="schip">+ Reprint</span><span class="schip">+ Slide deck</span></div>');
+    chips("fSamples", [], false, '<div class="suggest"><span class="schip">+ Cardizem</span><span class="schip">+ Brilinta</span></div>');
+    sentiment(null); button("✨ Log interaction", false); flash(false); net(null); pan(0);
+    $("voice").innerHTML = '<span class="vlink">🎙 Summarize from Voice Note (Requires Consent)</span>';
+    setChat([], false); setTimeline([]); setFollowups([]);
+  }
+
+  var LOGGED_SUM = "Discussed Cardizem efficacy; sentiment positive; shared brochures; left 5 samples. Follow-up next month.";
+  function fillLoggedForm(stagger) {
+    var s = stagger ? 1 : 0;
+    later(120 * s, function () { aiField("fType", "Meeting"); });
+    later(120 * s, function () { $("fDate").classList.add("ai", "pulse"); $("fDate").innerHTML = "Jul 15, 2026"; });
+    later(120 * s, function () { $("fTime").classList.add("ai", "pulse"); $("fTime").innerHTML = "14:30"; });
+    later(430 * s, function () { $("fTopics").classList.remove("ta"); aiField("fTopics", "Reviewed Cardizem efficacy data and once-daily dosing; addressed tolerability questions."); $("fTopics").classList.add("ta"); });
+    later(720 * s, function () { chips("fMaterials", ["Brochures"], true); });
+    later(1010 * s, function () { chips("fSamples", ["Cardizem x5"], true); });
+    later(1300 * s, function () { sentiment("positive"); q("#fSent").classList.add("ai", "pulse"); });
+    later(1600 * s, function () { $("fOutcomes").classList.remove("ta"); aiField("fOutcomes", "HCP receptive; open to prescribing for stable angina patients."); $("fOutcomes").classList.add("ta"); });
+    later(1890 * s, function () { $("fFollow").classList.remove("ta"); aiField("fFollow", "Share outcomes data; revisit next month."); $("fFollow").classList.add("ta"); });
+    later(2180 * s, function () { button("💾 Update interaction", true); });
+  }
+
+  var scenes = [
+    { sec: "Welcome", dur: 6000,
+      action: "How to use Meridian CRM",
+      detail: "A 2-minute guided tour. We'll cover the full app one section at a time — adding a doctor, the dashboard, three ways to log a visit, the AI assistant, and follow-ups.",
+      build: function () {
+        overlay('<div class="eyebrow">Guided Tutorial</div><h1>How to use <span class="g">Meridian CRM</span></h1>'
+          + '<div class="steps-list">'
+          + '<div class="s"><span class="n">1</span> Pick or add a doctor</div>'
+          + '<div class="s"><span class="n">2</span> Read the dashboard</div>'
+          + '<div class="s"><span class="n">3</span> Log a visit — chat, voice, or by hand</div>'
+          + '<div class="s"><span class="n">4</span> Use the AI assistant\'s 5 skills</div>'
+          + '<div class="s"><span class="n">5</span> Review history &amp; follow-ups</div>'
+          + '</div>');
+      } },
+
+    { sec: "1 · Getting started", dur: 5600,
+      action: "Step 1 — Pick a doctor in the left sidebar",
+      detail: "Everything you do belongs to one Healthcare Professional. Click any doctor on the left to select them — the whole screen then works with that person.",
+      build: function () { spot(["#side"]); } },
+
+    { sec: "1 · Getting started", dur: 6000,
+      action: "Step 2 — Or add a new doctor with “+ Add”",
+      detail: "Click <b>+ Add</b> to open this form. Fill in name, specialty, institution, tier and preferred products, then <b>Add HCP</b> — the new doctor is selected automatically.",
+      build: function () { later(700, function () { modal(true); }); } },
+
+    { sec: "2 · Dashboard", dur: 6400,
+      action: "Step 3 — Open the Dashboard for the big picture",
+      detail: "Click <b>Dashboard</b> in the top bar. You get totals, the sentiment split, and interactions by type — a quick read on how your engagement is going.",
+      build: function () { later(500, function () { view("dash"); }); } },
+
+    { sec: "3 · Log a visit — by chat", dur: 6000,
+      action: "The workspace: form on the left, AI assistant on the right",
+      detail: "Back on <b>Log Interaction</b>. These aren't two modes — they're one workspace. Whatever the assistant understands lands in the same form you can edit.",
+      build: function () { spot(["#formCard", "#chatCard"]); } },
+
+    { sec: "3 · Log a visit — by chat", dur: 5200,
+      action: "Step 4 — Type what happened, in plain English",
+      detail: "In the assistant box, just describe the visit the way you'd say it out loud. No fields to hunt through — one sentence is enough.",
+      build: function () {
+        spot(["#chatInput"]);
+        setChat([{ role: "user", text: "Today I met Dr. Mehta and discussed Cardizem efficacy. Sentiment was positive, I shared the brochures. Left 5 samples. Wants a follow-up next month." }], false);
+        later(1000, function () { setChat([{ role: "user", text: "Today I met Dr. Mehta and discussed Cardizem efficacy. Sentiment was positive, I shared the brochures. Left 5 samples. Wants a follow-up next month." }], true); });
+      } },
+
+    { sec: "3 · Log a visit — by chat", dur: 7600,
+      action: "Step 5 — Watch the form fill itself",
+      detail: "The assistant reads your sentence and fills every field. The <b>highlighted</b> ones are what the AI wrote — your cue to glance over them before saving.",
+      build: function () {
+        spot(["#formCard"]);
+        setChat([
+          { role: "user", text: "Today I met Dr. Mehta and discussed Cardizem efficacy. Sentiment was positive, I shared the brochures. Left 5 samples. Wants a follow-up next month." },
+          { role: "bot", text: "Logged it — a positive meeting on Cardizem efficacy, brochures shared, 5 samples left. I've filled the form for you to confirm. Want me to schedule the follow-up?", chips: [{ label: "🛠 Logged ✓", tool: true }, { label: "Sentiment: positive" }, { label: "meeting" }] }
+        ], false);
+        net("log_interaction"); fillLoggedForm(true);
+      } },
+
+    { sec: "3 · Log a visit — by chat", dur: 6400,
+      action: "Step 6 — Review, correct if needed, then Save",
+      detail: "The button says <b>Update</b>, not Log — the AI already created the record, so saving edits it instead of making a duplicate. Change anything by hand and your edit always wins.",
+      build: function () {
+        spot(["#submitBtn"]); focusEl("#submitBtn", 220); fillLoggedForm(false); setTimeline([{ type: "Meeting", date: "Jul 15, 2026", sent: "positive", sum: LOGGED_SUM }]);
+        later(1100, function () { sentiment("neutral"); q("#fSent").classList.add("ai", "pulse"); });
+        later(2000, function () { button("💾 Update interaction", true); flash(true); setTimeline([{ type: "Meeting", date: "Jul 15, 2026", sent: "neutral", sum: LOGGED_SUM }]); });
+      } },
+
+    { sec: "4 · Log a visit — by voice", dur: 5600,
+      action: "Step 7 — Prefer talking? Use the voice note — it asks consent first",
+      detail: "Click <b>Summarize from Voice Note</b>. It never records straight away — you must confirm the doctor agreed. That consent is saved with the record as an audit trail.",
+      build: function () {
+        spot(["#voice"]); focusEl("#voice", 120);
+        later(1100, function () {
+          $("voice").innerHTML = '<span class="vlink">🎙 Summarize from Voice Note</span>'
+            + '<div class="consent"><div class="ct">🔒 Consent required</div><p>Confirm that <b>Dr. Ananya Mehta</b> agreed to this interaction being captured as a voice note. Your answer is stored on the record.</p>'
+            + '<div class="btnrow"><button class="btn sm">Consent given — start recording</button><button class="btn ghost sm">Cancel</button></div></div>';
+        });
+      } },
+
+    { sec: "4 · Log a visit — by voice", dur: 5200,
+      action: "Step 8 — Speak your note; it transcribes live",
+      detail: "After you confirm, just talk. Your words appear in real time. When you're done, press <b>Stop &amp; summarize</b>.",
+      build: function () {
+        spot(["#voice"]); focusEl("#voice", 120);
+        $("voice").innerHTML = '<span class="vlink live"><span class="rec-dot"></span> Stop &amp; summarize</span>'
+          + '<div class="transcript"><div class="tlabel"><span class="rec-dot"></span> Listening…</div><div class="ttext" id="tt"></div></div>';
+        var words = "Quick call with Dr. Mehta about Brilinta dosing — she was receptive, left two samples.".split(" ");
+        var i = 0; function step() { if (i > words.length) return; $("tt").textContent = words.slice(0, i).join(" "); i++; later(150, step); } later(500, step);
+      } },
+
+    { sec: "4 · Log a visit — by voice", dur: 5200,
+      action: "Step 9 — Your spoken note becomes structured fields too",
+      detail: "The transcript runs through the same AI extraction the chat uses — so voice fills the form exactly the same way. Review and save.",
+      build: function () {
+        spot(["#formCard"]); focusEl("#formCard");
+        $("voice").innerHTML = '<span class="vlink">🎙 Summarize from Voice Note</span><div class="transcript"><div class="tlabel done">Voice note captured — review, then submit</div><div class="ttext">Quick call with Dr. Mehta about Brilinta dosing — she was receptive, left two samples.</div></div>';
+        net("log_interaction");
+        later(400, function () { aiField("fType", "Call"); });
+        later(700, function () { $("fTopics").classList.remove("ta"); aiField("fTopics", "Brilinta dosing discussion; HCP receptive."); $("fTopics").classList.add("ta"); });
+        later(1000, function () { chips("fSamples", ["Brilinta x2"], true); });
+        later(1300, function () { sentiment("positive"); q("#fSent").classList.add("ai", "pulse"); });
+        later(1600, function () { button("💾 Update interaction", true); });
+      } },
+
+    { sec: "5 · Log a visit — by hand", dur: 6400,
+      action: "Step 10 — Rather type it yourself? Every field is editable",
+      detail: "Attendees, Materials and Samples are <b>chip fields</b> — type a value, press <b>Enter</b>, and it becomes a tag. Click the × to remove one. Nothing here needs the AI.",
+      build: function () {
+        spot(["#attendField", "#matField"]); focusEl("#attendField", 90);
+        later(500, function () { chips("fAttend", ["Dr. Ananya Mehta"], false); });
+        later(1100, function () { chips("fAttend", ["Dr. Ananya Mehta", "Nurse Priya"], false); });
+        later(1700, function () { chips("fMaterials", ["Brochure"], false, '<div class="suggest"><span class="schip">+ Reprint</span><span class="schip">+ Slide deck</span></div>'); });
+        later(2300, function () { chips("fMaterials", ["Brochure", "Clinical study"], false, '<div class="suggest"><span class="schip">+ Reprint</span></div>'); });
+      } },
+
+    { sec: "6 · The AI assistant", dur: 5000,
+      action: "The assistant has 5 skills — Skill 1: log a new visit",
+      detail: "Ask it to record anything: “Log a visit with Dr. Mehta, discussed Cardizem dosing, very positive, left 5 samples.” It saves the interaction and it appears in your history.",
+      build: function () {
+        spot(["#chatCard"]); focusEl("#chatCard");
+        setChat([{ role: "user", text: "Log a visit with Dr. Mehta, discussed Cardizem dosing, very positive, left 5 samples" }, { role: "bot", text: "Done — visit logged with positive sentiment and 5 samples.", chips: [{ label: "🛠 Logged ✓", tool: true }] }], false);
+        net("log_interaction"); setTimeline([{ type: "Visit", date: "Jul 15, 2026", sent: "positive", sum: "Discussed Cardizem dosing; very positive; 5 samples left." }]);
+      } },
+
+    { sec: "6 · The AI assistant", dur: 5000,
+      action: "Skill 2 — Change something you already logged",
+      detail: "Just say “Actually, change the sentiment to negative.” No ID needed — it edits your most recent interaction, and only allowed fields can change.",
+      build: function () {
+        spot(["#chatCard", "#timelineCard"]); focusEl("#chatCard");
+        setChat([{ role: "user", text: "Actually, change the sentiment to negative and note that we discussed formulary access" }, { role: "bot", text: "Updated — sentiment set to negative, formulary access noted.", chips: [{ label: "🛠 Edited ✓", tool: true }] }], false);
+        net("edit_interaction"); setTimeline([{ type: "Visit", date: "Jul 15, 2026", sent: "negative", sum: "Discussed Cardizem dosing and formulary access; sentiment negative." }]);
+      } },
+
+    { sec: "6 · The AI assistant", dur: 5000,
+      action: "Skill 3 — Ask what you discussed before",
+      detail: "“What did we discuss recently?” The assistant reads this doctor's past interactions and summarizes them — so you walk in prepared.",
+      build: function () {
+        spot(["#chatCard"]); focusEl("#chatCard");
+        setChat([{ role: "user", text: "What did we discuss recently?" }, { role: "bot", text: "Across your last 2 visits: Cardizem efficacy and dosing, then formulary access. Sentiment moved from positive to negative on the pricing talk.", chips: [{ label: "🛠 History", tool: true }, { label: "2 record(s)" }] }], false);
+        net("get_interaction_history"); setTimeline([{ type: "Visit", date: "Jul 15, 2026", sent: "negative", sum: "Discussed Cardizem dosing and formulary access." }]);
+      } },
+
+    { sec: "6 · The AI assistant", dur: 5000,
+      action: "Skill 4 — Look up the doctor's details",
+      detail: "“Tell me about this doctor — specialty and preferred products?” It returns their profile: specialty, institution, tier and the products they favour.",
+      build: function () {
+        spot(["#chatCard"]); focusEl("#chatCard");
+        setChat([{ role: "user", text: "Tell me about this doctor — specialty and preferred products?" }, { role: "bot", text: "Dr. Ananya Mehta — Cardiology at Apollo Hospitals, Tier A. Preferred products: Cardizem and Brilinta.", chips: [{ label: "🛠 HCP lookup", tool: true }] }], false);
+        net("get_hcp_details"); setTimeline([{ type: "Visit", date: "Jul 15, 2026", sent: "negative", sum: "Discussed Cardizem dosing and formulary access." }]);
+      } },
+
+    { sec: "6 · The AI assistant", dur: 5400,
+      action: "Skill 5 — Schedule a follow-up",
+      detail: "“Schedule a follow-up in 2 weeks to share the outcomes data.” It sets a task with a due date — and it appears in the Follow-ups panel on the right.",
+      build: function () {
+        spot(["#fuCard"]); focusEl("#fuCard", 120);
+        setChat([{ role: "user", text: "Schedule a follow-up in 2 weeks to share the outcomes data" }, { role: "bot", text: "Scheduled — I'll remind you on Jul 29 to share the outcomes data with Dr. Mehta.", chips: [{ label: "🛠 Follow-up set", tool: true }] }], false);
+        net("schedule_followup"); setTimeline([{ type: "Visit", date: "Jul 15, 2026", sent: "negative", sum: "Discussed Cardizem dosing and formulary access." }]);
+        later(700, function () { setFollowups([{ p: "Share the outcomes data", d: "Due Jul 29, 2026 · Dr. Ananya Mehta" }]); });
+      } },
+
+    { sec: "7 · History & follow-ups", dur: 6000,
+      action: "Step 11 — Everything you log builds the timeline",
+      detail: "Scroll down to <b>Interaction History</b> for every past touchpoint, newest first. Hit <b>Edit</b> on any card to change it in a pop-up — the assistant keeps it in sync.",
+      build: function () {
+        spot(["#timelineCard", "#fuCard"]); focusEl("#timelineCard", 90);
+        setTimeline([
+          { type: "Visit", date: "Jul 15, 2026", sent: "negative", sum: "Discussed Cardizem dosing and formulary access.", edit: true },
+          { type: "Meeting", date: "Jul 15, 2026", sent: "positive", sum: LOGGED_SUM, edit: true }
+        ]);
+        setFollowups([{ p: "Share the outcomes data", d: "Due Jul 29, 2026 · Dr. Ananya Mehta" }]);
+      } },
+
+    { sec: "Recap", dur: 6000,
+      action: "That's the whole app — the AI fills, you decide",
+      detail: "Pick a doctor → describe the visit by chat, voice, or by hand → review the highlighted fields → save. The assistant logs, edits, recalls, and schedules — you stay in control of every record.",
+      build: function () {
+        overlay('<div class="eyebrow">You\'re ready</div><h1>The AI fills.<br>You <span class="g">decide</span>.</h1>'
+          + '<p>Speak or type one sentence → the agent structures the record → you confirm it. Fast to log, and nothing is saved that you didn\'t check.</p>');
+      } }
+  ];
+
+  var total = scenes.reduce(function (a, s) { return a + s.dur; }, 0);
+  var starts = []; (function () { var t = 0; scenes.forEach(function (s) { starts.push(t); t += s.dur; }); })();
+  var idx = 0, sceneEl = 0, playing = false, last = 0;
+
+  function fmt(ms) { var s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+
+  function paintScene(i) {
+    idx = i; sceneEl = 0; resetStage();
+    var sc = scenes[i]; sc.build();
+    $("capNum").innerHTML = ("0" + (i + 1)).slice(-2) + "<span>/" + scenes.length + "</span>";
+    $("capSec").textContent = sc.sec;
+    $("capAction").innerHTML = sc.action;
+    $("capDetail").innerHTML = sc.detail;
+    document.querySelectorAll(".chapter").forEach(function (c) {
+      var st = Number(c.getAttribute("data-scene")), en = Number(c.getAttribute("data-end"));
+      c.classList.toggle("on", i >= st && i <= en);
+    });
+    updateProgress();
+  }
+  function updateProgress() { var cur = starts[idx] + Math.min(sceneEl, scenes[idx].dur); $("scrubFill").style.width = (cur / total * 100) + "%"; $("tCur").textContent = fmt(cur); }
+  function tick(ts) {
+    if (playing) {
+      if (!last) last = ts;
+      var dt = ts - last; last = ts; sceneEl += dt;
+      if (sceneEl >= scenes[idx].dur) { if (idx < scenes.length - 1) paintScene(idx + 1); else { playing = false; sceneEl = scenes[idx].dur; setPlayIcon(); } }
+      updateProgress();
+    } else { last = 0; }
+    requestAnimationFrame(tick);
+  }
+  function setPlayIcon() { $("playIcon").innerHTML = playing ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>'; }
+  function play() { if (idx === scenes.length - 1 && sceneEl >= scenes[idx].dur) paintScene(0); playing = true; last = 0; setPlayIcon(); }
+  function pause() { playing = false; setPlayIcon(); }
+
+  (function buildChapters() {
+    var rail = $("chapters"); var seen = {}; var order = []; var n = 0;
+    scenes.forEach(function (s, i) { if (!(s.sec in seen)) { seen[s.sec] = i; order.push(s.sec); } });
+    order.forEach(function (name) {
+      var startI = seen[name]; var endI = startI;
+      scenes.forEach(function (s, i) { if (s.sec === name) endI = i; });
+      n++;
+      var b = document.createElement("button");
+      b.className = "chapter"; b.setAttribute("data-scene", startI); b.setAttribute("data-end", endI);
+      b.innerHTML = '<span class="num">' + ("0" + n).slice(-2) + "</span>" + name;
+      b.addEventListener("click", function () { paintScene(startI); if (!playing) updateProgress(); });
+      rail.appendChild(b);
+    });
+  })();
+
+  (function buildTicks() { var t = $("scrubTicks"); starts.forEach(function (st, i) { if (i === 0) return; var e = document.createElement("i"); e.style.left = (st / total * 100) + "%"; t.appendChild(e); }); })();
+  $("scrub").addEventListener("click", function (e) {
+    var r = this.getBoundingClientRect(); var target = (e.clientX - r.left) / r.width * total; var i = 0;
+    for (var k = 0; k < scenes.length; k++) if (target >= starts[k]) i = k;
+    paintScene(i); if (!playing) updateProgress();
+  });
+
+  $("playBtn").addEventListener("click", function () { playing ? pause() : play(); });
+  $("prevBtn").addEventListener("click", function () { paintScene(Math.max(0, idx - 1)); if (!playing) updateProgress(); });
+  $("nextBtn").addEventListener("click", function () { paintScene(Math.min(scenes.length - 1, idx + 1)); if (!playing) updateProgress(); });
+  $("themeBtn").addEventListener("click", function () { var root = document.documentElement; var isLight = root.getAttribute("data-theme") === "light"; root.setAttribute("data-theme", isLight ? "dark" : "light"); this.textContent = isLight ? "☀ Theater" : "🌙 Studio"; });
+
+  function scaleStage() { var screen = $("screen"); var s = screen.clientWidth / 1160; $("scaler").style.transform = "scale(" + s + ")"; screen.style.height = (640 * s) + "px"; }
+  window.addEventListener("resize", scaleStage);
+
+  $("tTot").textContent = fmt(total);
+  scaleStage(); paintScene(0); setPlayIcon(); requestAnimationFrame(tick);
+  if (!reduce) setTimeout(play, 900);
+})();
+</script>
